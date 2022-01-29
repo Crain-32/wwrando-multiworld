@@ -2,7 +2,7 @@
 import os
 import re
 from collections import OrderedDict
-
+import random
 from fs_helpers import *
 import tweaks
 
@@ -507,9 +507,6 @@ def randomize_progression_items(self):
   if not game_beatable:
     raise Exception("Game is not beatable on this seed! This error shouldn't happen.")
 
-
-
-
 def write_changed_items(self):
   for location_name, item_name in self.logic.done_item_locations.items():
     paths = self.logic.item_locations[location_name]["Paths"]
@@ -590,13 +587,14 @@ def change_hardcoded_item_in_rel(self, path, offset, item_id):
   rel = self.get_rel(path)
   rel.write_data(write_u8, offset, item_id)
 
-def change_chest_item(self, arc_path, chest_index, layer, item_id):
+def change_chest_item(self, arc_path, chest_index, layer, item_id, world_id=0):
   if arc_path.endswith("Stage.arc"):
     dzx = self.get_arc(arc_path).get_file("stage.dzs")
   else:
     dzx = self.get_arc(arc_path).get_file("room.dzr")
   chest = dzx.entries_by_type_and_layer("TRES", layer)[chest_index]
   chest.item_id = item_id
+  chest.world_id = 1
   chest.save_changes()
 
 def change_event_item(self, arc_path, event_index, actor_index, action_index, item_id):

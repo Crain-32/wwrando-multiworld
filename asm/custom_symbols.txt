@@ -85,6 +85,7 @@ sys/main.dol:
   give_temporary_sword_during_ganondorf_fight_in_swordless: 0x803FED10
   give_temporary_sword_in_orcas_house_in_swordless: 0x803FED2C
   remove_temporary_sword_when_loading_stage_in_swordless: 0x803FED74
+  custom_write_item_world_id: 0x803FF6B9
   test_room_stage_name: 0x8022D034
   test_room_starting_items_list: 0x8022D03C
   test_room_spawn_id: 0x800531E3

@@ -33,6 +33,7 @@ def apply_patch(self, patch_name):
       
       if file_path == "sys/main.dol":
         if org_address >= free_space_start:
+          print("Bad Free Space for {} at Address {:02X}".format(patch_name, org_address))
           add_or_extend_main_dol_free_space_section(self, new_bytes, org_address)
           continue
         else:
