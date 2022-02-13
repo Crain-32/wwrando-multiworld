@@ -616,6 +616,7 @@ def change_scob_item(self, arc_path, scob_index, layer, item_id):
   scob = dzx.entries_by_type_and_layer("SCOB", layer)[scob_index]
   if scob.actor_class_name in ["d_a_salvage", "d_a_tag_kb_item"]:
     scob.item_id = item_id
+    scob.world_id = 0x69
     scob.save_changes()
   else:
     raise Exception("%s/SCOB%03X is an unknown type of SCOB" % (arc_path, scob_index))

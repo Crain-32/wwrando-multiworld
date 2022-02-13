@@ -2631,6 +2631,9 @@ d_a_salvage:
   duplicate_id:
     Bitfield name: z_rot
     Mask: 0x0003
+  world_id:
+    Bitfield name: z_rot
+    Mask: 0xFF00
 
 d_a_salvage_tbox:
   unknown_param_1:
@@ -2992,7 +2995,7 @@ d_a_tag_kb_item:
   item_pickup_flag:
     Bitfield name: params
     Mask: 0x0000FF00
-  unknown_param_3:
+  world_id:
     Bitfield name: params
     Mask: 0x00FF0000
   unknown_param_4:
