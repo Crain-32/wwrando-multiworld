@@ -137,12 +137,12 @@ class WWRandomizerWindow(QMainWindow):
     
     self.show()
     
-    if not IS_RUNNING_FROM_SOURCE:
-      self.update_checker_thread = UpdateCheckerThread()
-      self.update_checker_thread.finished_checking_for_updates.connect(self.show_update_check_results)
-      self.update_checker_thread.start()
-    else:
-      self.ui.update_checker_label.setText("(Running from source, skipping release update check.)")
+    # if not IS_RUNNING_FROM_SOURCE:
+    #   self.update_checker_thread = UpdateCheckerThread()
+    #   self.update_checker_thread.finished_checking_for_updates.connect(self.show_update_check_results)
+    #   self.update_checker_thread.start()
+    # else:
+    #   self.ui.update_checker_label.setText("(Running from source, skipping release update check.)")
   
   def generate_seed(self):
     random.seed(None)
