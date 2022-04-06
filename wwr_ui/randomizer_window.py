@@ -971,6 +971,14 @@ class WWRandomizerWindow(QMainWindow):
         num_possible_rewards += 1
     else:
       should_enable_options["num_race_mode_dungeons"] = False
+
+    mw_opts = ["world_count", "world_id", "label_for_world_count", "label_for_world_id"]
+    if not self.get_option_value("multiworld") == "Multiworld":
+      for i in mw_opts:
+        getattr(self.ui, i).setEnabled(False)
+    else:
+      for i in mw_opts:
+        getattr(self.ui, i).setEnabled(True)
     
     self.filtered_rgear.setFilterStrings(items_to_filter_out)
     

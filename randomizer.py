@@ -377,7 +377,9 @@ class Randomizer:
         tweaks.enable_developer_mode(self)
       if self.heap_display:
         tweaks.enable_heap_display(self)
-      
+      if self.options.get("multiworld") != "Disabled":
+        patcher.apply_patch(self, "multiworld_scripts")
+        
       if self.test_room_args is not None:
         tweaks.test_room(self)
     options_completed += 1
@@ -458,7 +460,6 @@ class Randomizer:
     patcher.apply_patch(self, "flexible_item_locations")
     patcher.apply_patch(self, "fix_vanilla_bugs")
     patcher.apply_patch(self, "misc_rando_features")
-    patcher.apply_patch(self, "multiworld_scripts")
     tweaks.add_custom_actor_rels(self)
     tweaks.skip_wakeup_intro_and_start_at_dock(self)
     tweaks.start_ship_at_outset(self)
