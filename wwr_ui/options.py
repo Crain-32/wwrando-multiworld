@@ -174,8 +174,6 @@ OPTIONS = OrderedDict([
     "remove_title_and_ending_videos",
     "Removes the two prerendered videos that play if you wait on the title screen and after you beat the game. (Decreases randomized ISO's filesize by about 600MB.)\nIf you keep these videos in, they won't reflect your custom player model or colors.",
   ),
-  
-  
   (
     "custom_player_model",
     "Replaces Link's model with a custom player model.\nThese are loaded from the /models folder."
@@ -220,6 +218,10 @@ OPTIONS = OrderedDict([
     "randomize_enemies",
     "Randomizes the placement of non-boss enemies."
   ),
+  (
+    "multiworld",
+    "Enables Multiworld randomization."
+  )
 ])
 
 NON_PERMALINK_OPTIONS = [
