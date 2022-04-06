@@ -20,6 +20,9 @@ from wwrando_paths import DATA_PATH, ASM_PATH, RANDO_ROOT_PATH, IS_RUNNING_FROM_
 import customizer
 from wwlib import stage_searcher
 from asm import disassemble
+from classes.world import World
+from classes.settings import Settings
+from logic.fill import fill
 
 try:
   from keys.seed_key import SEED_KEY
@@ -71,12 +74,14 @@ class InvalidCleanISOError(Exception):
 
 class Randomizer:
   def __init__(self, seed, clean_iso_path, randomized_output_folder, options, permalink=None, cmd_line_args=OrderedDict()):
+    self.worlds = list()
     self.randomized_output_folder = randomized_output_folder
     self.options = options
     self.seed = seed
     self.permalink = permalink
     self.seed_hash = None
-    
+    self.world_id: int = options.get("world_id")
+
     self.dry_run = ("-dry" in cmd_line_args)
     self.disassemble = ("-disassemble" in cmd_line_args)
     self.export_disc_to_folder = ("-exportfolder" in cmd_line_args)
@@ -148,195 +153,15 @@ class Randomizer:
         stage_searcher.print_all_used_item_pickup_flags(self)
         stage_searcher.print_all_used_chest_open_flags(self)
         stage_searcher.print_all_event_flags_used_by_stb_cutscenes(self)
-    
-    # Starting items. This list is read by the Logic when initializing your currently owned items list.
-    self.starting_items = [
-      "Wind Waker",
-      "Wind's Requiem",
-      "Ballad of Gales",
-      "Song of Passing",
-      "Boat's Sail",
-    ]
-    self.starting_items += self.options.get("starting_gear", [])
-    
-    if self.options.get("sword_mode") == "Start with Hero's Sword":
-      self.starting_items.append("Progressive Sword")
-    # Add starting Triforce Shards.
-    num_starting_triforce_shards = int(self.options.get("num_starting_triforce_shards", 0))
-    for i in range(num_starting_triforce_shards):
-      self.starting_items.append("Triforce Shard %d" % (i+1))
-    
-    starting_pohs = self.options.get("starting_pohs")
-    for i in range(starting_pohs):
-      self.starting_items.append("Piece of Heart")
-    
-    starting_hcs = self.options.get("starting_hcs")
-    for i in range(starting_hcs):
-      self.starting_items.append("Heart Container")
-    
-    # Default entrances connections to be used if the entrance randomizer is not on.
-    self.entrance_connections = OrderedDict([
-      ("Dungeon Entrance On Dragon Roost Island", "Dragon Roost Cavern"),
-      ("Dungeon Entrance In Forest Haven Sector", "Forbidden Woods"),
-      ("Dungeon Entrance In Tower of the Gods Sector", "Tower of the Gods"),
-      ("Dungeon Entrance On Headstone Island", "Earth Temple"),
-      ("Dungeon Entrance On Gale Isle", "Wind Temple"),
-      
-      ("Secret Cave Entrance on Outset Island", "Savage Labyrinth"),
-      ("Secret Cave Entrance on Dragon Roost Island", "Dragon Roost Island Secret Cave"),
-      ("Secret Cave Entrance on Fire Mountain", "Fire Mountain Secret Cave"),
-      ("Secret Cave Entrance on Ice Ring Isle", "Ice Ring Isle Secret Cave"),
-      ("Secret Cave Entrance on Private Oasis", "Cabana Labyrinth"),
-      ("Secret Cave Entrance on Needle Rock Isle", "Needle Rock Isle Secret Cave"),
-      ("Secret Cave Entrance on Angular Isles", "Angular Isles Secret Cave"),
-      ("Secret Cave Entrance on Boating Course", "Boating Course Secret Cave"),
-      ("Secret Cave Entrance on Stone Watcher Island", "Stone Watcher Island Secret Cave"),
-      ("Secret Cave Entrance on Overlook Island", "Overlook Island Secret Cave"),
-      ("Secret Cave Entrance on Bird's Peak Rock", "Bird's Peak Rock Secret Cave"),
-      ("Secret Cave Entrance on Pawprint Isle", "Pawprint Isle Chuchu Cave"),
-      ("Secret Cave Entrance on Pawprint Isle Side Isle", "Pawprint Isle Wizzrobe Cave"),
-      ("Secret Cave Entrance on Diamond Steppe Island", "Diamond Steppe Island Warp Maze Cave"),
-      ("Secret Cave Entrance on Bomb Island", "Bomb Island Secret Cave"),
-      ("Secret Cave Entrance on Rock Spire Isle", "Rock Spire Isle Secret Cave"),
-      ("Secret Cave Entrance on Shark Island", "Shark Island Secret Cave"),
-      ("Secret Cave Entrance on Cliff Plateau Isles", "Cliff Plateau Isles Secret Cave"),
-      ("Secret Cave Entrance on Horseshoe Island", "Horseshoe Island Secret Cave"),
-      ("Secret Cave Entrance on Star Island", "Star Island Secret Cave"),
-    ])
-    self.dungeon_and_cave_island_locations = OrderedDict([
-      ("Dragon Roost Cavern", "Dragon Roost Island"),
-      ("Forbidden Woods", "Forest Haven"),
-      ("Tower of the Gods", "Tower of the Gods"),
-      ("Earth Temple", "Headstone Island"),
-      ("Wind Temple", "Gale Isle"),
-      
-      ("Secret Cave Entrance on Outset Island", "Outset Island"),
-      ("Secret Cave Entrance on Dragon Roost Island", "Dragon Roost Island"),
-      ("Secret Cave Entrance on Fire Mountain", "Fire Mountain"),
-      ("Secret Cave Entrance on Ice Ring Isle", "Ice Ring Isle"),
-      ("Secret Cave Entrance on Private Oasis", "Private Oasis"),
-      ("Secret Cave Entrance on Needle Rock Isle", "Needle Rock Isle"),
-      ("Secret Cave Entrance on Angular Isles", "Angular Isles"),
-      ("Secret Cave Entrance on Boating Course", "Boating Course"),
-      ("Secret Cave Entrance on Stone Watcher Island", "Stone Watcher Island"),
-      ("Secret Cave Entrance on Overlook Island", "Overlook Island"),
-      ("Secret Cave Entrance on Bird's Peak Rock", "Bird's Peak Rock"),
-      ("Secret Cave Entrance on Pawprint Isle", "Pawprint Isle"),
-      ("Secret Cave Entrance on Pawprint Isle Side Isle", "Pawprint Isle"),
-      ("Secret Cave Entrance on Diamond Steppe Island", "Diamond Steppe Island"),
-      ("Secret Cave Entrance on Bomb Island", "Bomb Island"),
-      ("Secret Cave Entrance on Rock Spire Isle", "Rock Spire Isle"),
-      ("Secret Cave Entrance on Shark Island", "Shark Island"),
-      ("Secret Cave Entrance on Cliff Plateau Isles", "Cliff Plateau Isles"),
-      ("Secret Cave Entrance on Horseshoe Island", "Horseshoe Island"),
-      ("Secret Cave Entrance on Star Island", "Star Island"),
-    ])
-    
+
     # Default starting island (Outset) if the starting island randomizer is not on.
     self.starting_island_index = 44
-    
-    # Default charts for each island.
-    self.island_number_to_chart_name = OrderedDict([
-      (1, "Treasure Chart 25"),
-      (2, "Treasure Chart 7"),
-      (3, "Treasure Chart 24"),
-      (4, "Triforce Chart 2"),
-      (5, "Treasure Chart 11"),
-      (6, "Triforce Chart 7"),
-      (7, "Treasure Chart 13"),
-      (8, "Treasure Chart 41"),
-      (9, "Treasure Chart 29"),
-      (10, "Treasure Chart 22"),
-      (11, "Treasure Chart 18"),
-      (12, "Treasure Chart 30"),
-      (13, "Treasure Chart 39"),
-      (14, "Treasure Chart 19"),
-      (15, "Treasure Chart 8"),
-      (16, "Treasure Chart 2"),
-      (17, "Treasure Chart 10"),
-      (18, "Treasure Chart 26"),
-      (19, "Treasure Chart 3"),
-      (20, "Treasure Chart 37"),
-      (21, "Treasure Chart 27"),
-      (22, "Treasure Chart 38"),
-      (23, "Triforce Chart 1"),
-      (24, "Treasure Chart 21"),
-      (25, "Treasure Chart 6"),
-      (26, "Treasure Chart 14"),
-      (27, "Treasure Chart 34"),
-      (28, "Treasure Chart 5"),
-      (29, "Treasure Chart 28"),
-      (30, "Treasure Chart 35"),
-      (31, "Triforce Chart 3"),
-      (32, "Triforce Chart 6"),
-      (33, "Treasure Chart 1"),
-      (34, "Treasure Chart 20"),
-      (35, "Treasure Chart 36"),
-      (36, "Treasure Chart 23"),
-      (37, "Treasure Chart 12"),
-      (38, "Treasure Chart 16"),
-      (39, "Treasure Chart 4"),
-      (40, "Treasure Chart 17"),
-      (41, "Treasure Chart 31"),
-      (42, "Triforce Chart 5"),
-      (43, "Treasure Chart 9"),
-      (44, "Triforce Chart 4"),
-      (45, "Treasure Chart 40"),
-      (46, "Triforce Chart 8"),
-      (47, "Treasure Chart 15"),
-      (48, "Treasure Chart 32"),
-      (49, "Treasure Chart 33"),
-    ])
-    
-    # This list will hold the randomly selected dungeon boss locations that are required in race mode.
-    # If race mode is not on, this list will remain empty.
-    self.race_mode_required_locations = []
-    # This list will hold the dungeon names of the race mode required locations.
-    # If race mode is not on, this list will remain empty.
-    self.race_mode_required_dungeons = []
-    # This list will hold all item location names that should not have any items in them in race mode.
-    # If race mode is not on, this list will remain empty.
-    self.race_mode_banned_locations = []
-    
+
     self.custom_model_name = self.options.get("custom_player_model", "Link")
     self.using_custom_sail_texture = False
-    
-    self.logic = Logic(self)
-    
-    num_progress_locations = self.logic.get_num_progression_locations()
-    max_race_mode_banned_locations = self.logic.get_max_race_mode_banned_locations()
-    num_progress_items = self.logic.get_num_progression_items()
-    if num_progress_locations - max_race_mode_banned_locations < num_progress_items: 
-      error_message = "Not enough progress locations to place all progress items.\n\n"
-      error_message += "Total progress items: %d\n" % num_progress_items
-      error_message += "Progress locations with current options: %d\n" % num_progress_locations
-      if max_race_mode_banned_locations > 0:
-        error_message += "Maximum Race Mode banned locations: %d\n" % max_race_mode_banned_locations
-      error_message += "\nYou need to check more of the progress location options in order to give the randomizer enough space to place all the items."
-      raise TooFewProgressionLocationsError(error_message)
-    
-    # We need to determine if the user's selected options result in a dungeons-only-start.
-    # Dungeons-only-start meaning that the only locations accessible at the start of the run are dungeon locations.
-    # e.g. If the user selects Dungeons, Expensive Purchases, and Sunken Treasures, the dungeon locations are the only ones the player can check first.
-    # We need to distinguish this situation because it can cause issues for the randomizer's item placement logic (specifically when placing keys in DRC).
-    self.logic.temporarily_make_dungeon_entrance_macros_impossible()
-    accessible_undone_locations = self.logic.get_accessible_remaining_locations(for_progression=True)
-    if len(accessible_undone_locations) == 0:
-      self.dungeons_only_start = True
-    else:
-      self.dungeons_only_start = False
-    self.logic.update_entrance_connection_macros() # Reset the dungeon entrance macros.
-    
-    # Also determine if these options result in a dungeons-and-caves-only-start.
-    # Dungeons-and-caves-only-start means the only locations accessible at the start of the run are dungeon or secret cave locations.
-    # This situation can also cause issues for the item placement logic (specifically when placing the first item of the run).
-    self.logic.temporarily_make_entrance_macros_impossible()
-    accessible_undone_locations = self.logic.get_accessible_remaining_locations(for_progression=True)
-    if len(accessible_undone_locations) == 0:
-      self.dungeons_and_caves_only_start = True
-    else:
-      self.dungeons_and_caves_only_start = False
-    self.logic.update_entrance_connection_macros() # Reset the entrance macros.
+
+
+
   
   def randomize(self):
     options_completed = 0
@@ -383,30 +208,36 @@ class Randomizer:
     options_completed += 1
     
     yield("Randomizing...", options_completed)
+
+    for world_id in self.options.get("world_amount"):
+      world = World(Settings(self.options), world_id)
+      world.determine_chart_mappings(self)
+      world.determine_chart_mappings(self)
+      world.determine_progression_locations()
+      world.determine_race_mode_dungeons(self)
+      world.set_item_pools()
+      self.worlds.append(world)
+
     
-    if self.options.get("randomize_charts"):
-      self.reset_rng()
-      charts.randomize_charts(self)
+    # if self.options.get("randomize_starting_island"): # We'll disable this for now
+    #   self.reset_rng()
+    #    starting_island.randomize_starting_island(self)
     
-    if self.options.get("randomize_starting_island"):
-      self.reset_rng()
-      starting_island.randomize_starting_island(self)
+    # if self.options.get("randomize_entrances") not in ["Disabled", None]: # Waiting on more implementations
+    #   self.reset_rng()
+    #   entrances.randomize_entrances(self)
     
-    if self.options.get("randomize_entrances") not in ["Disabled", None]:
-      self.reset_rng()
-      entrances.randomize_entrances(self)
-    
-    if self.options.get("randomize_music"):
-      self.reset_rng()
-      music.randomize_music(self)
+    # if self.options.get("randomize_music"): # I'm not interested supporting this for the Alpha
+    #   self.reset_rng()
+    #   music.randomize_music(self)
     
     options_completed += 1
     
     # Enemies must be randomized before items in order for the enemy logic to properly take into account what items you do and don't start with.
-    if self.options.get("randomize_enemies"):
-      yield("Randomizing enemy locations...", options_completed)
-      self.reset_rng()
-      enemies.randomize_enemies(self)
+    # if self.options.get("randomize_enemies"): # Not supporting Enemy Randomizer Yet
+    #   yield("Randomizing enemy locations...", options_completed)
+    #   self.reset_rng()
+    #   enemies.randomize_enemies(self)
     
     if self.options.get("randomize_enemy_palettes"):
       yield("Randomizing enemy colors...", options_completed)
@@ -417,14 +248,14 @@ class Randomizer:
     yield("Randomizing items...", options_completed)
     if self.randomize_items:
       self.reset_rng()
-      items.randomize_items(self)
+      self.worlds = fill(self.worlds, self.rng)
     
     options_completed += 2
     
     yield("Saving items...", options_completed)
     if self.randomize_items and not self.dry_run:
-      items.write_changed_items(self)
-      tweaks.randomize_and_update_hints(self)
+      items.write_changed_items(self, self.world_id)
+      # tweaks.randomize_and_update_hints(self) # We'll implement Hints after we get this table.
     
     if not self.dry_run:
       self.apply_necessary_post_randomization_tweaks()
@@ -659,7 +490,7 @@ class Randomizer:
       self.jpcs_by_path[jpc_path] = jpc
       return jpc
   
-  def get_rel(self, rel_path):
+  def get_rel(self, rel_path) -> REL:
     rel_path = rel_path.replace("\\", "/")
     
     if rel_path in self.rels_by_path:

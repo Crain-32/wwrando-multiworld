@@ -166,107 +166,7 @@ class Logic:
           self.unplaced_progress_items.remove(group_name)
     
     self.cached_enemies_tested_for_reqs_tuple = OrderedDict()
-  
-  def set_location_to_item(self, location_name, item_name):
-    #print("Setting %s to %s" % (location_name, item_name))
-    
-    if self.done_item_locations[location_name]:
-      raise Exception("Location was used twice: " + location_name)
-    
-    self.done_item_locations[location_name] = item_name
-    self.remaining_item_locations.remove(location_name)
-    
-    self.add_owned_item(item_name)
-  
-  def set_multiple_locations_to_group(self, available_locations, group_name):
-    items_in_group = self.progress_item_groups[group_name]
-    
-    if len(available_locations) < len(items_in_group):
-      raise Exception("Not enough locations to place all items in group %s" % group_name)
-    
-    for item_name in items_in_group:
-      available_locations = self.filter_locations_valid_for_item(available_locations, item_name)
-      location_name = available_locations.pop()
-      self.set_location_to_item(location_name, item_name)
-    
-    self.unplaced_progress_items.remove(group_name)
-  
-  def set_prerandomization_item_location(self, location_name, item_name):
-    # Temporarily keep track of where certain items are placed before the main progression item randomization loop starts.
-    
-    #print("Setting prerand %s to %s" % (location_name, item_name))
-    
-    assert location_name in self.item_locations
-    self.prerandomization_item_locations[location_name] = item_name
-  
-  def get_num_progression_items(self):
-    num_progress_items = 0
-    for item_name in self.unplaced_progress_items:
-      if item_name in self.progress_item_groups:
-        group_name = item_name
-        for item_name in self.progress_item_groups[group_name]:
-          num_progress_items += 1
-      else:
-        num_progress_items += 1
-    
-    return num_progress_items
-  
-  def get_num_progression_locations(self):
-    return Logic.get_num_progression_locations_static(self.item_locations, self.rando.options)
-  
-  @staticmethod
-  def get_num_progression_locations_static(item_locations, options):
-    progress_locations = Logic.filter_locations_for_progression_static(
-      item_locations.keys(),
-      item_locations,
-      options,
-      filter_sunken_treasure=True
-    )
-    num_progress_locations = len(progress_locations)
-    if options.get("progression_triforce_charts"):
-      num_progress_locations += 8
-    if options.get("progression_treasure_charts"):
-      num_progress_locations += 41
-    
-    return num_progress_locations
 
-  def get_max_race_mode_banned_locations(self):
-    if not self.rando.options.get("race_mode"):
-      return 0
-    
-    all_locations = self.item_locations.keys()
-    progress_locations = self.filter_locations_for_progression(all_locations)
-    location_counts_by_dungeon = OrderedDict()
-    
-    for location_name in progress_locations:
-      zone_name, _ = self.split_location_name_by_zone(location_name)
-      
-      dungeon_name = None
-      if self.is_dungeon_location(location_name):
-        dungeon_name = zone_name
-      elif location_name == "Mailbox - Letter from Orca":
-        dungeon_name = "Forbidden Woods"
-      elif location_name == "Mailbox - Letter from Baito":
-        dungeon_name = "Earth Temple"
-      elif location_name == "Mailbox - Letter from Aryll":
-        dungeon_name = "Forsaken Fortress"
-      elif location_name == "Mailbox - Letter from Tingle":
-        dungeon_name = "Forsaken Fortress"
-      
-      if dungeon_name is None:
-        continue
-      
-      if dungeon_name in location_counts_by_dungeon:
-        location_counts_by_dungeon[dungeon_name] += 1
-      else:
-        location_counts_by_dungeon[dungeon_name] = 1
-    
-    dungeon_location_counts = list(location_counts_by_dungeon.values())
-    dungeon_location_counts.sort(reverse=True)
-    num_banned_dungeons = 6 - int(self.rando.options.get("num_race_mode_dungeons"))
-    max_banned_locations = sum(dungeon_location_counts[:num_banned_dungeons])
-    
-    return max_banned_locations
   
   def get_progress_and_non_progress_locations(self):
     all_locations = self.item_locations.keys()
@@ -636,6 +536,7 @@ class Logic:
   
   @staticmethod
   def load_and_parse_item_locations():
+    return # THIS IS NO LONGER CORRECT
     with open(os.path.join(LOGIC_PATH, "item_locations.txt")) as f:
       item_locations = yaml.load(f, YamlOrderedDictLoader)
     
@@ -653,6 +554,7 @@ class Logic:
     return item_locations
     
   def load_and_parse_macros(self):
+    return # THIS IS NO LONGER NEEDED
     with open(os.path.join(LOGIC_PATH, "macros.txt")) as f:
       macro_strings = yaml.safe_load(f)
     self.macros = {}

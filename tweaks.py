@@ -7,7 +7,7 @@ from collections import OrderedDict
 import copy
 from random import Random
 import math
-
+from data.extras import DUNGEON_NAME_DICT
 from fs_helpers import *
 from asm import patcher
 from wwlib import texture_utils
@@ -589,7 +589,7 @@ def allow_dungeon_items_to_appear_anywhere(self):
   for short_dungeon_name, base_item_name, item_id in dungeon_items:
     item_name = short_dungeon_name + " " + base_item_name
     base_item_id = self.item_name_to_id[base_item_name]
-    dungeon_name = self.logic.DUNGEON_NAMES[short_dungeon_name]
+    dungeon_name = DUNGEON_NAME_DICT[short_dungeon_name]
     
     # Register the proper item ID for this item with the randomizer.
     self.register_renamed_item(item_id, item_name)

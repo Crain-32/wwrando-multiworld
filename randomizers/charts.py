@@ -1,24 +1,19 @@
 
 import copy
+from classes.world import World
 
-def randomize_charts(self):
-  # Shuffles around which chart points to each sector.
-  
-  original_item_names = list(self.island_number_to_chart_name.values())
-  
-  # Shuffles the list of island numbers.
-  # The shuffled island numbers determine which sector each chart points to.
-  shuffled_island_numbers = list(self.island_number_to_chart_name.keys())
-  self.rng.shuffle(shuffled_island_numbers)
-  
-  if not self.dry_run:
-    randomizable_charts = [chart for chart in self.chart_list.charts if chart.type in [0, 1, 2, 6]]
+def place_randomized_charts(randomizer, world: World):
+  original_item_names = list(randomizer.island_number_to_chart_name.values())
+
+  if not randomizer.dry_run:
+    randomizable_charts = [chart for chart in randomizer.chart_list.charts if chart.type in [0, 1, 2, 6]]
     original_charts = copy.deepcopy(randomizable_charts)
   
   for original_item_name in original_item_names:
-    shuffled_island_number = shuffled_island_numbers.pop()
-    
-    if not self.dry_run:
+    # This needs to be swapped to use the Macros for each world instead.
+    # shuffled_island_number = shuffled_island_numbers.pop()
+    shuffled_island_number = 0
+    if not randomizer.dry_run:
       # Finds the corresponding charts for the shuffled island number and original item name.
       chart_to_copy_from = next(chart for chart in original_charts if chart.island_number == shuffled_island_number)
       chart = next(chart for chart in randomizable_charts if chart.item_name == original_item_name)
@@ -39,12 +34,8 @@ def randomize_charts(self):
       chart.save_changes()
       
       # Then update the salvage object on the sea so it knows what chart corresponds to it now.
-      dzx = self.get_arc("files/res/Stage/sea/Room%d.arc" % chart.island_number).get_file("room.dzr")
+      dzx = randomizer.get_arc("files/res/Stage/sea/Room%d.arc" % chart.island_number).get_file("room.dzr")
       for scob in dzx.entries_by_type("SCOB"):
         if scob.actor_class_name == "d_a_salvage" and scob.salvage_type == 0:
           scob.chart_index_plus_1 = chart.owned_chart_index_plus_1
           scob.save_changes()
-    
-    self.island_number_to_chart_name[shuffled_island_number] = original_item_name
-  
-  self.logic.update_chart_macros()

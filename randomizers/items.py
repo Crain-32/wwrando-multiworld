@@ -505,14 +505,13 @@ def randomize_progression_items(self):
   if not game_beatable:
     raise Exception("Game is not beatable on this seed! This error shouldn't happen.")
 
-def write_changed_items(self):
-  for location_name, item_name in self.logic.done_item_locations.items():
-    paths = self.logic.item_locations[location_name]["Paths"]
-    for path in paths:
-      change_item(self, path, item_name)
+def write_changed_items(self, world_id: int = 0):
+  locations = self.worlds[world_id].location_entries
+  for location in locations:
+    for path in location.filePaths:
+      change_item(self, path, location.current_item.item_id, location.current_item.world_id)
 
-def change_item(self, path, item_name):
-  item_id = self.item_name_to_id[item_name]
+def change_item(self, path: str, item_id: int, world_id: int = 0):
   
   rel_match = re.search(r"^(rels/[^.]+\.rel)@([0-9A-F]{4})$", path)
   main_dol_match = re.search(r"^main.dol@(8[0-9A-F]{7})$", path)
@@ -526,10 +525,10 @@ def change_item(self, path, item_name):
     rel_path = rel_match.group(1)
     offset = int(rel_match.group(2), 16)
     path = os.path.join("files", rel_path)
-    change_hardcoded_item_in_rel(self, path, offset, item_id)
+    change_hardcoded_item_in_rel(self, path, offset, item_id, world_id)
   elif main_dol_match:
     address = int(main_dol_match.group(1), 16)
-    change_hardcoded_item_in_dol(self, address, item_id)
+    change_hardcoded_item_in_dol(self, address, item_id, world_id)
   elif custom_symbol_match:
     custom_symbol = custom_symbol_match.group(1)
     found_custom_symbol = False
@@ -538,10 +537,10 @@ def change_item(self, path, item_name):
         found_custom_symbol = True
         if file_path == "sys/main.dol":
           address = custom_symbols_for_file[custom_symbol]
-          change_hardcoded_item_in_dol(self, address, item_id)
+          change_hardcoded_item_in_dol(self, address, item_id, world_id)
         else:
           offset = custom_symbols_for_file[custom_symbol]
-          change_hardcoded_item_in_rel(self, file_path, offset, item_id)
+          change_hardcoded_item_in_rel(self, file_path, offset, item_id, world_id)
         break
     if not found_custom_symbol:
       raise Exception("Invalid custom symbol: %s" % custom_symbol)
@@ -552,13 +551,13 @@ def change_item(self, path, item_name):
     else:
       layer = None
     chest_index = int(chest_match.group(3), 16)
-    change_chest_item(self, arc_path, chest_index, layer, item_id)
+    change_chest_item(self, arc_path, chest_index, layer, item_id, world_id)
   elif event_match:
     arc_path = "files/res/Stage/" + event_match.group(1)
     event_index = int(event_match.group(2), 16)
     actor_index = int(event_match.group(3), 16)
     action_index = int(event_match.group(4), 16)
-    change_event_item(self, arc_path, event_index, actor_index, action_index, item_id)
+    change_event_item(self, arc_path, event_index, actor_index, action_index, item_id, world_id)
   elif scob_match:
     arc_path = "files/res/Stage/" + scob_match.group(1)
     if scob_match.group(2):
@@ -566,7 +565,7 @@ def change_item(self, path, item_name):
     else:
       layer = None
     scob_index = int(scob_match.group(3), 16)
-    change_scob_item(self, arc_path, scob_index, layer, item_id)
+    change_scob_item(self, arc_path, scob_index, layer, item_id, world_id)
   elif actor_match:
     arc_path = "files/res/Stage/" + actor_match.group(1)
     if actor_match.group(2):
@@ -574,28 +573,28 @@ def change_item(self, path, item_name):
     else:
       layer = None
     actor_index = int(actor_match.group(3), 16)
-    change_actor_item(self, arc_path, actor_index, layer, item_id)
+    change_actor_item(self, arc_path, actor_index, layer, item_id, world_id)
   else:
     raise Exception("Invalid item path: " + path)
 
-def change_hardcoded_item_in_dol(self, address, item_id):
+def change_hardcoded_item_in_dol(self, address, item_id: int, world_id: int = 0):
   self.dol.write_data(write_u8, address, item_id)
 
-def change_hardcoded_item_in_rel(self, path, offset, item_id):
+def change_hardcoded_item_in_rel(self, path, offset, item_id: int, world_id: int = 0):
   rel = self.get_rel(path)
   rel.write_data(write_u8, offset, item_id)
 
-def change_chest_item(self, arc_path, chest_index, layer, item_id, world_id=0):
+def change_chest_item(self, arc_path, chest_index, layer, item_id: int, world_id: int = 0):
   if arc_path.endswith("Stage.arc"):
     dzx = self.get_arc(arc_path).get_file("stage.dzs")
   else:
     dzx = self.get_arc(arc_path).get_file("room.dzr")
   chest = dzx.entries_by_type_and_layer("TRES", layer)[chest_index]
   chest.item_id = item_id
-  chest.world_id = 1
+  chest.world_id = world_id
   chest.save_changes()
 
-def change_event_item(self, arc_path, event_index, actor_index, action_index, item_id):
+def change_event_item(self, arc_path, event_index, actor_index, action_index, item_id: int, world_id: int = 0):
   event_list = self.get_arc(arc_path).get_file("event_list.dat")
   action = event_list.events[event_index].actors[actor_index].actions[action_index]
   
@@ -606,7 +605,7 @@ def change_event_item(self, arc_path, event_index, actor_index, action_index, it
     action.name = "011get_item"
     action.properties[0].value = [item_id]
 
-def change_scob_item(self, arc_path, scob_index, layer, item_id):
+def change_scob_item(self, arc_path, scob_index, layer, item_id: int, world_id: int = 0):
   if arc_path.endswith("Stage.arc"):
     dzx = self.get_arc(arc_path).get_file("stage.dzs")
   else:
@@ -614,12 +613,12 @@ def change_scob_item(self, arc_path, scob_index, layer, item_id):
   scob = dzx.entries_by_type_and_layer("SCOB", layer)[scob_index]
   if scob.actor_class_name in ["d_a_salvage", "d_a_tag_kb_item"]:
     scob.item_id = item_id
-    scob.world_id = 0x69
+    scob.world_id = world_id
     scob.save_changes()
   else:
     raise Exception("%s/SCOB%03X is an unknown type of SCOB" % (arc_path, scob_index))
 
-def change_actor_item(self, arc_path, actor_index, layer, item_id):
+def change_actor_item(self, arc_path, actor_index, layer, item_id: int, world_id: int = 0):
   if arc_path.endswith("Stage.arc"):
     dzx = self.get_arc(arc_path).get_file("stage.dzs")
   else:
