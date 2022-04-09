@@ -16,7 +16,7 @@ class Location:
     current_item: GameItem = GameItem(game_item_id=item_id_dict["Nothing"])
 
     @staticmethod
-    def from_dict(dict_obj: dict[str, str|list], area_name: str):
+    def from_dict(dict_obj, area_name: str):
         return Location(name=dict_obj["Name"],
                         category_set=list(dict_obj["Category"]),
                         requirement=Requirement.from_dict(dict_obj["Needs"]),

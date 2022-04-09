@@ -421,5 +421,5 @@ def dump_simple_world_locations(worlds, output_filename: str) -> None:
     with open("./dump/" + output_filename + ".json", 'w') as output_file:
         json.dump(output, output_file, indent='\t')
 
-def simple_loc_parse(world) -> list[dict[str, str|int]]:
+def simple_loc_parse(world):
     return [location.json_output() for location in world.location_entries]

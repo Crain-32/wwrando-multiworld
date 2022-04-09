@@ -7,10 +7,10 @@ from data.extras import *
 class Requirement:
 
     type: str
-    args: list[str|int|dict]
+    args: list
 
     @staticmethod
-    def from_dict(dict_obj: [str, str|int]):
+    def from_dict(dict_obj):
         req_type = str(dict_obj["type"]).upper()
         if req_type not in REQUIREMENT_TYPES:
             raise RuntimeError(f"Invalid Type {req_type} passed in.")
@@ -23,7 +23,7 @@ class Macro:
     expression: Requirement
 
     @staticmethod
-    def from_dict(dict_obj: dict[str, str|dict]):
+    def from_dict(dict_obj):
         return Macro(
             name=dict_obj["Name"], expression=Requirement.from_dict(dict_obj["Expression"])
         )
