@@ -6,7 +6,7 @@ from classes.gameitem import *
 from classes.location import Location
 from logic.search import locations_reachable, game_beatable, get_accessible_locations
 from classes.world import World
-
+from logic.spoilerlog import generate_spoiler_log
 
 def fill(worlds: list[World], random_state: Random):
     worlds = place_hardcoded_items(worlds)
@@ -42,11 +42,7 @@ def fill(worlds: list[World], random_state: Random):
     # I can't remember why the assumed fill is twice yet, so I've removed it till the first one is stable
     # worlds = assumed_fill(worlds, major_items, item_pool, logical_locations, random_state)
     if not game_beatable(worlds):
-        for world in worlds:
-            world.dump_world_graph(f"world-{world.world_id}")
-        raise RuntimeWarning(f"The Game is not Beatable: {worlds[0]}")
-    else:
-        worlds[0].dump_world_graph("after_game_beatable")
+        raise RuntimeWarning(f"The Game is not Beatable!")
 
     return worlds
 
@@ -255,7 +251,6 @@ def forward_fill_until_more_free_space(worlds: list[World], items_to_place: list
 
         print(f"Size of Original {original_size} vs current {len(forward_placed_items)}")
         if len(forward_placed_items) == original_size:
-            worlds[0].dump_world_graph("failed_forward_fill")
             raise RuntimeError("No items opened up the forward fill")
         accessible_locations = get_accessible_locations(worlds, forward_placed_items, allowed_locations)
 

@@ -219,8 +219,16 @@ OPTIONS = OrderedDict([
     "Randomizes the placement of non-boss enemies."
   ),
   (
-    "multiworld",
+    "multiplayer",
     "Enables Multiworld randomization."
+  ),
+  (
+    "world_count",
+    "Number of Worlds for Multiworld"
+  ),
+  (
+    "world_id",
+    "Selected World Id for Multiworld"
   )
 ])
 

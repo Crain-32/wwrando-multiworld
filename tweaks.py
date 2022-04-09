@@ -7,6 +7,8 @@ from collections import OrderedDict
 import copy
 from random import Random
 import math
+
+from classes.location import Location
 from data.extras import DUNGEON_NAME_DICT
 from fs_helpers import *
 from asm import patcher
@@ -736,54 +738,54 @@ def fix_shop_item_y_offsets(self):
       new_y_offset = 20.0
       self.dol.write_data(write_float, display_data_addr+0x10, new_y_offset)
 
-def update_shop_item_descriptions(self):
-  item_name = self.logic.done_item_locations["The Great Sea - Beedle's Shop Ship - 20 Rupee Item"]
+def update_shop_item_descriptions(self, locations: list[Location]):
+  item_name = filter((lambda loc: loc.name == "GreatSeaBeedleShop20Rupee"), locations).__next__().current_item.simple_offset_rep()
   cost = 20
   msg = self.bmg.messages_by_id[3906]
   msg.string = "\\{1A 06 FF 00 00 01}%s  %d Rupees\\{1A 06 FF 00 00 00}" % (item_name, cost)
   msg = self.bmg.messages_by_id[3909]
   msg.string = "%s   %d Rupees\nWill you buy it?\n\\{1A 05 00 00 08}I'll buy it\nNo thanks" % (item_name, cost)
-  
-  item_name = self.logic.done_item_locations["Rock Spire Isle - Beedle's Special Shop Ship - 500 Rupee Item"]
+
+  item_name = filter((lambda loc: loc.name == "RockSpireBeedle500RupeeItem"), locations).__next__().current_item.simple_offset_rep()
   cost = 500
   msg = self.bmg.messages_by_id[12106]
   msg.string = "\\{1A 06 FF 00 00 01}%s  %d Rupees\n\\{1A 06 FF 00 00 00}This is my last one." % (item_name, cost)
   msg = self.bmg.messages_by_id[12109]
   msg.string = "This \\{1A 06 FF 00 00 01}%s\\{1A 06 FF 00 00 00} is a mere \\{1A 06 FF 00 00 01}%d Rupees\\{1A 06 FF 00 00 00}!\nBuy it! Buy it! Buy buy buy!\n\\{1A 05 00 00 08}I'll buy it\nNo thanks" % (item_name, cost)
   
-  item_name = self.logic.done_item_locations["Rock Spire Isle - Beedle's Special Shop Ship - 950 Rupee Item"]
+  item_name = filter((lambda loc: loc.name == "RockSpireBeedle950RupeeItem"), locations).__next__().current_item.simple_offset_rep()
   cost = 950
   msg = self.bmg.messages_by_id[12107]
   msg.string = "\\{1A 06 FF 00 00 01}%s  %d Rupees\n\\{1A 06 FF 00 00 00}This is my last one of these, too." % (item_name, cost)
   msg = self.bmg.messages_by_id[12110]
   msg.string = "This \\{1A 06 FF 00 00 01}%s\\{1A 06 FF 00 00 00} is only \\{1A 06 FF 00 00 01}%d Rupees\\{1A 06 FF 00 00 00}!\nBuy it! Buy it! Buy buy buy!\n\\{1A 05 00 00 08}I'll buy it\nNo thanks" % (item_name, cost)
   
-  item_name = self.logic.done_item_locations["Rock Spire Isle - Beedle's Special Shop Ship - 900 Rupee Item"]
+  item_name = filter((lambda loc: loc.name == "RockSpireBeedle900RupeeItem"), locations).__next__().current_item.simple_offset_rep()
   cost = 900
   msg = self.bmg.messages_by_id[12108]
   msg.string = "\\{1A 06 FF 00 00 01}%s  %d Rupees\n\\{1A 06 FF 00 00 00}The price may be high, but it'll pay\noff handsomely in the end!" % (item_name, cost)
   msg = self.bmg.messages_by_id[12111]
   msg.string = "This \\{1A 06 FF 00 00 01}%s \\{1A 06 FF 00 00 00}is just \\{1A 06 FF 00 00 01}%d Rupees!\\{1A 06 FF 00 00 00}\nBuy it! Buy it! Buy buy buy!\n\\{1A 05 00 00 08}I'll buy it\nNo thanks" % (item_name, cost)
 
-def update_auction_item_names(self):
-  item_name = self.logic.done_item_locations["Windfall Island - 5 Rupee Auction"]
+def update_auction_item_names(self, locations: list[Location]):
+  item_name = filter((lambda loc: loc.name == "WindfallAuction5Rupee"), locations).__next__().current_item.simple_offset_rep()
   msg = self.bmg.messages_by_id[7441]
   msg.string = "\\{1A 06 FF 00 00 01}%s" % item_name
   
-  item_name = self.logic.done_item_locations["Windfall Island - 40 Rupee Auction"]
+  item_name = filter((lambda loc: loc.name == "WindfallAuction40Rupee"), locations).__next__().current_item.simple_offset_rep()
   msg = self.bmg.messages_by_id[7440]
   msg.string = "\\{1A 06 FF 00 00 01}%s" % item_name
   
-  item_name = self.logic.done_item_locations["Windfall Island - 60 Rupee Auction"]
+  item_name = filter((lambda loc: loc.name == "WindfallAuction60Rupee"), locations).__next__().current_item.simple_offset_rep()
   msg = self.bmg.messages_by_id[7442]
   msg.string = "\\{1A 06 FF 00 00 01}%s" % item_name
   
-  item_name = self.logic.done_item_locations["Windfall Island - 80 Rupee Auction"]
+  item_name = filter((lambda loc: loc.name == "WindfallAuction80Rupee"), locations).__next__().current_item.simple_offset_rep()
   msg = self.bmg.messages_by_id[7443]
   msg.string = "\\{1A 06 FF 00 00 01}%s" % item_name
 
-def update_battlesquid_item_names(self):
-  item_name = self.logic.done_item_locations["Windfall Island - Battlesquid - First Prize"]
+def update_battlesquid_item_names(self, locations: list[Location]):
+  item_name = filter((lambda loc: loc.name == "WindfallBattleSquidFirstPrize"), locations).__next__().current_item.simple_offset_rep()
   msg = self.bmg.messages_by_id[7520]
   msg.string = "\\{1A 05 01 00 8E}Hoorayyy! Yayyy! Yayyy!\nOh, thank you, Mr. Sailor!\n\n\n"
   msg.string += word_wrap_string(
@@ -791,7 +793,7 @@ def update_battlesquid_item_names(self):
     max_line_length=43
   )
   
-  item_name = self.logic.done_item_locations["Windfall Island - Battlesquid - Second Prize"]
+  item_name = filter((lambda loc: loc.name == "WindfallBattleSquidSecondPrize"), locations).__next__().current_item.simple_offset_rep()
   msg = self.bmg.messages_by_id[7521]
   msg.string = "\\{1A 05 01 00 8E}Hoorayyy! Yayyy! Yayyy!\nOh, thank you so much, Mr. Sailor!\n\n\n"
   msg.string += word_wrap_string(
@@ -803,10 +805,10 @@ def update_battlesquid_item_names(self):
   #item_name = self.logic.done_item_locations["Windfall Island - Battlesquid - 20 Shots or Less Prize"]
   #msg = self.bmg.messages_by_id[7523]
 
-def update_item_names_in_letter_advertising_rock_spire_shop(self):
-  item_name_1 = self.logic.done_item_locations["Rock Spire Isle - Beedle's Special Shop Ship - 500 Rupee Item"]
-  item_name_2 = self.logic.done_item_locations["Rock Spire Isle - Beedle's Special Shop Ship - 950 Rupee Item"]
-  item_name_3 = self.logic.done_item_locations["Rock Spire Isle - Beedle's Special Shop Ship - 900 Rupee Item"]
+def update_item_names_in_letter_advertising_rock_spire_shop(self, locations: list[Location]):
+  item_name_1 = filter((lambda loc: loc.name == "RockSpireBeedle500RupeeItem"), locations).__next__().current_item.simple_offset_rep()
+  item_name_2 = filter((lambda loc: loc.name == "RockSpireBeedle950RupeeItem"), locations).__next__().current_item.simple_offset_rep()
+  item_name_3 = filter((lambda loc: loc.name == "RockSpireBeedle900RupeeItem"), locations).__next__().current_item.simple_offset_rep()
   msg = self.bmg.messages_by_id[3325]
   
   lines = msg.string.split("\n")
@@ -835,14 +837,14 @@ def update_item_names_in_letter_advertising_rock_spire_shop(self):
   msg.string += hint_string
   msg.string += unchanged_string_after
 
-def update_savage_labyrinth_hint_tablet(self):
+def update_savage_labyrinth_hint_tablet(self, locations: list[Location]):
   # Update the tablet on the first floor of savage labyrinth to give hints as to the items inside the labyrinth.
+
+  floor_30_item_name = filter((lambda loc: loc.name == "OutsetSavageFloor30Chest"), locations).__next__().current_item.simple_offset_rep()
+  floor_50_item_name = filter((lambda loc: loc.name == "OutsetSavageFloor50Chest"), locations).__next__().current_item.simple_offset_rep()
   
-  floor_30_item_name = self.logic.done_item_locations["Outset Island - Savage Labyrinth - Floor 30"]
-  floor_50_item_name = self.logic.done_item_locations["Outset Island - Savage Labyrinth - Floor 50"]
-  
-  floor_30_is_progress = (floor_30_item_name in self.logic.all_progress_items)
-  floor_50_is_progress = (floor_50_item_name in self.logic.all_progress_items)
+  floor_30_is_progress = False
+  floor_50_is_progress = False
   
   floor_30_item_name = get_hint_item_name(floor_30_item_name)
   floor_50_item_name = get_hint_item_name(floor_50_item_name)
@@ -955,13 +957,13 @@ def randomize_and_update_hints(self):
   update_fishmen_hints(self, hints[1:])
 
 def get_hint_item_name(item_name):
-  if item_name.startswith("Triforce Chart"):
+  if "TriforceChart" in item_name:
     return "Triforce Chart"
-  if item_name.startswith("Treasure Chart"):
+  if "TreasureChart" in item_name:
     return "Treasure Chart"
-  if item_name.endswith("Small Key"):
+  if "SmallKey" in item_name:
     return "Small Key"
-  if item_name.endswith("Big Key"):
+  if "BigKey" in item_name:
     return "Big Key"
   return item_name
 
@@ -1712,12 +1714,12 @@ def implement_key_bag(self):
   pirate_charm_icon.save_changes()
 
 DUNGEON_NAME_TO_SEA_CHART_QUEST_MARKER_INDEX = OrderedDict([
-  ("Dragon Roost Cavern", 7),
-  ("Forbidden Woods", 5),
-  ("Tower of the Gods", 3), # Originally Southern Triangle Island
-  ("Forsaken Fortress", 2), # Originally Eastern Triangle Island
-  ("Earth Temple", 0),
-  ("Wind Temple", 1),
+  ("DragonRoostCavern", 7),
+  ("ForbiddenWoods", 5),
+  ("TowerOfTheGods", 3), # Originally Southern Triangle Island
+  ("ForsakenFortress", 2), # Originally Eastern Triangle Island
+  ("EarthTemple", 0),
+  ("WindTemple", 1),
 ])
 # Note: 4 is Northern Triangle Island and 6 is Greatfish Isle, these are not used by the randomizer.
 

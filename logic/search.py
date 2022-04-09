@@ -167,7 +167,6 @@ def pare_down_playthrough(worlds: list[World]) -> list[World]:
 
 def generate_playthrough(worlds: list[World]):
     search(SEARCH_GENERATE_PLAYTHROUGH, worlds, [])
-    dump_object(worlds[0].assumed_items, "assumed_by_search")
     worlds = pare_down_playthrough(worlds)
     generate_spoiler_log(worlds)
 

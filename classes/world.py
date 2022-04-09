@@ -133,7 +133,7 @@ class World:
                          filter(
                              (lambda progressive:
                                 World.location_category_cache(self._location_category_list(),
-                                                              progressive.category_set)
+                                                              progressive.category_set) and "Multiworld" in progressive.category_set
                                ),
                              location_list
                          )

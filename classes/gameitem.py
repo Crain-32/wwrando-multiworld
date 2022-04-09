@@ -38,8 +38,12 @@ class GameItem:
 
     @staticmethod
     def random_junk(world_id: int):
-        item_val =  random.choice(junk_ids)
+        item_val =  random.choice(junk_item_ids)
         return GameItem(game_item_id=item_val, world_id=world_id, junk_item=True)
+
+    @staticmethod
+    def random_junk_id(rando):
+        return rando.choice(junk_ids)
 
     def __eq__(self, game_item) -> bool:
         return self.game_item_id == game_item.game_item_id and self.world_id == game_item.world_id
@@ -47,8 +51,8 @@ class GameItem:
     def soft_equality(self, game_item) -> bool:
         return self.game_item_id == game_item.game_item_id and self.world_id == game_item.world_id
 
-    def simple_rep(self):
-        return f"W{self.world_id}: {item_id_to_name_dict[self.game_item_id]}"
+    def simple_offset_rep(self):
+        return f"W{self.world_id + 1} {item_id_to_name_dict[self.game_item_id]}"
 
     def set_item_type(self):
         if is_triforce_shard(self):
@@ -72,7 +76,7 @@ class GameItem:
         return self
 
 def junk_item_check(item: GameItem) -> GameItem:
-    item.junk_item = item.game_item_id in junk_ids
+    item.junk_item = item.game_item_id in junk_item_ids
     return item
 
 def is_triforce_shard(item: GameItem) -> bool:
@@ -105,11 +109,12 @@ def is_progressive(item: GameItem) -> bool:
 def is_inventory_item(item: GameItem) -> bool:
     return item.game_item_id in inventory_item_ids
 
-junk_ids = list(range(0x13))
-junk_ids.extend(list(range(0x15,0x20)))
-junk_ids.extend(list(range(0x3F, 0x4B)))
-junk_ids.extend([0x82, 0x83])
+junk_item_ids = list(range(0x01, 0x13))
+junk_item_ids.extend(list(range(0x15, 0x20)))
+junk_item_ids.extend(list(range(0x3F, 0x4B)))
+junk_item_ids.extend([0x82, 0x83])
 
+junk_ids = [0x01,0x02,0x03,0x04,0x05,0x06,0x0F,0x1F,0x45,0x46,0x47,0x48,0x82, 0x83, 0xB8]
 misc_item_ids = list(range(0x69, 0x73)) # Pearls + Songs
 misc_item_ids.extend(list(range(0xA3, 0xAB))) # Tingle Statues + Hurricane Spin
 misc_item_ids.append(0xB2) # Magic Meter Upgrade

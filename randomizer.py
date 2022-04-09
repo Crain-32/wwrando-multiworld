@@ -1,4 +1,4 @@
-
+import itertools
 import os
 import re
 from random import Random
@@ -23,7 +23,7 @@ from asm import disassemble
 from classes.world import World
 from classes.settings import Settings
 from logic.fill import fill
-
+from logic.spoilerlog import generate_spoiler_log
 try:
   from keys.seed_key import SEED_KEY
 except ImportError:
@@ -80,7 +80,7 @@ class Randomizer:
     self.seed = seed
     self.permalink = permalink
     self.seed_hash = None
-    self.world_id: int = options.get("world_id")
+    self.world_id: int = int(options.get("world_id")) - 1
 
     self.dry_run = ("-dry" in cmd_line_args)
     self.disassemble = ("-disassemble" in cmd_line_args)
@@ -120,7 +120,16 @@ class Randomizer:
     self.used_actor_ids = list(range(0x1F6))
     
     self.read_text_file_lists()
-    
+
+    self.dungeon_and_cave_island_locations = OrderedDict([
+      ("DragonRoostCavern", "Dragon Roost Island"),
+      ("ForbiddenWoods", "Forest Haven"),
+      ("ForsakenFortress", "Forsaken Fortress"),
+      ("TowerOfTheGods", "Tower of the Gods"),
+      ("EarthTemple", "Headstone Island"),
+      ("WindTemple", "Gale Isle")
+    ])
+
     if not self.dry_run:
       if not os.path.isfile(clean_iso_path):
         raise InvalidCleanISOError("Clean WW ISO does not exist: %s" % clean_iso_path)
@@ -211,8 +220,9 @@ class Randomizer:
     
     yield("Randomizing...", options_completed)
 
-    for world_id in self.options.get("world_amount"):
+    for world_id in range(int(self.options.get("world_count"))):
       world = World(Settings(self.options), world_id)
+      world.load_world()
       world.determine_chart_mappings(self)
       world.determine_chart_mappings(self)
       world.determine_progression_locations()
@@ -260,7 +270,7 @@ class Randomizer:
       # tweaks.randomize_and_update_hints(self) # We'll implement Hints after we get this table.
     
     if not self.dry_run:
-      self.apply_necessary_post_randomization_tweaks()
+      self.apply_necessary_post_randomization_tweaks(self.world_id)
     options_completed += 7
     
     yield("Saving randomized ISO...", options_completed)
@@ -278,8 +288,7 @@ class Randomizer:
     
     if self.randomize_items:
       if not self.options.get("do_not_generate_spoiler_log"):
-        self.write_spoiler_log()
-      self.write_non_spoiler_log()
+        generate_spoiler_log(self.worlds, self.randomized_output_folder, f"{self.seed}-W{self.world_id}")
     
     yield("Done", -1)
   
@@ -351,14 +360,15 @@ class Randomizer:
     tweaks.check_hide_ship_sail(self)
     customizer.change_player_custom_colors(self)
   
-  def apply_necessary_post_randomization_tweaks(self):
+  def apply_necessary_post_randomization_tweaks(self, world_id: int):
     if self.randomize_items:
-      tweaks.update_shop_item_descriptions(self)
-      tweaks.update_auction_item_names(self)
-      tweaks.update_battlesquid_item_names(self)
-      tweaks.update_item_names_in_letter_advertising_rock_spire_shop(self)
-      tweaks.update_savage_labyrinth_hint_tablet(self)
-    tweaks.show_quest_markers_on_sea_chart_for_dungeons(self, dungeon_names=self.race_mode_required_dungeons)
+      locations = list(itertools.chain.from_iterable(map((lambda area: area.locations), self.worlds[world_id].area_entries.values())))
+      tweaks.update_shop_item_descriptions(self, locations)
+      tweaks.update_auction_item_names(self, locations)
+      tweaks.update_battlesquid_item_names(self, locations)
+      tweaks.update_item_names_in_letter_advertising_rock_spire_shop(self, locations)
+      tweaks.update_savage_labyrinth_hint_tablet(self, locations)
+    tweaks.show_quest_markers_on_sea_chart_for_dungeons(self, dungeon_names=self.worlds[world_id].race_mode_dungeons)
     tweaks.prevent_fire_mountain_lava_softlock(self)
   
   def verify_supported_version(self, clean_iso_path):
@@ -655,10 +665,10 @@ class Randomizer:
       self.gcm.changed_files[jpc_path] = jpc.data
     
     if self.export_disc_to_folder:
-      output_folder_path = os.path.join(self.randomized_output_folder, "WW Random %s" % self.seed)
+      output_folder_path = os.path.join(self.randomized_output_folder, ("WW Random %s" % (self.seed + str(self.world_id))))
       generator = self.gcm.export_disc_to_folder_with_changed_files(output_folder_path)
     else:
-      output_file_path = os.path.join(self.randomized_output_folder, "WW Random %s.iso" % self.seed)
+      output_file_path = os.path.join(self.randomized_output_folder, ("WW Random %s.iso" % (self.seed + str(self.world_id))))
       generator = self.gcm.export_disc_to_iso_with_changed_files(output_file_path)
     
     while True:

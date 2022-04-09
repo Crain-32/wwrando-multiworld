@@ -99,6 +99,8 @@ class WWRandomizerWindow(QMainWindow):
         pass
       elif isinstance(widget, QSpinBox):
         widget.valueChanged.connect(self.update_settings)
+      elif isinstance(widget, QLineEdit):
+        widget.textChanged.connect(self.update_settings)
       else:
         raise Exception("Option widget is invalid: %s" % option_name)
     
@@ -447,7 +449,7 @@ class WWRandomizerWindow(QMainWindow):
     options = OrderedDict()
     for option_name in OPTIONS:
       options[option_name] = self.get_option_value(option_name)
-    num_progress_locations = Logic.get_num_progression_locations_static(self.cached_item_locations, options)
+    num_progress_locations = 10
     
     text = "Where Should Progress Items Appear? (Selected: %d Possible Progression Locations)" % num_progress_locations
     self.ui.groupBox.setTitle(text)
@@ -659,6 +661,8 @@ class WWRandomizerWindow(QMainWindow):
       return widget.itemText(widget.currentIndex())
     elif isinstance(widget, QSpinBox):
       return widget.value()
+    elif isinstance(widget, QLineEdit):
+      return widget.text()
     elif isinstance(widget, QListView):
       if widget.model() == None:
         return []
@@ -703,6 +707,11 @@ class WWRandomizerWindow(QMainWindow):
           model = model.sourceModel()
         model.setStringList(new_value)
         model.sort(0)
+    elif isinstance(widget, QLineEdit):
+      if new_value.isdigit():
+        widget.setText(new_value)
+      else:
+        widget.setText("0")
     else:
       print("Option widget is invalid: %s" % option_name)
   
@@ -973,7 +982,7 @@ class WWRandomizerWindow(QMainWindow):
       should_enable_options["num_race_mode_dungeons"] = False
 
     mw_opts = ["world_count", "world_id", "label_for_world_count", "label_for_world_id"]
-    if not self.get_option_value("multiworld") == "Multiworld":
+    if not self.get_option_value("multiplayer") == "Multiworld":
       for i in mw_opts:
         getattr(self.ui, i).setEnabled(False)
     else:

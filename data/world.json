@@ -5170,7 +5170,7 @@
                     "OriginalItem": "TriforceShard6",
                     "Category": ["SavageLabyrinth", "Multiworld"],
                     "Needs": { "type": "macro", "args": ["Can Play WR"]},
-                    "Paths": ["ave09/Room20.arc/Chest000"]
+                    "Paths": ["Cave09/Room20.arc/Chest000"]
                 }
             ],
             "Exits": [
@@ -8935,7 +8935,7 @@
                 {
                     "Name": "DefeatGanondorf",
                     "OriginalItem": "GameBeatable",
-                    "Category": ["DefeatGanondorf"],
+                    "Category": ["DefeatGanondorf", "Multiworld"],
                     "Needs": { "type": "macro", "args": ["Can Defeat Ganondorf"]},
                     "Paths": []
                 }

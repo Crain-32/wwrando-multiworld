@@ -3,6 +3,7 @@ import os
 import re
 from collections import OrderedDict
 import random
+from classes.gameitem import GameItem
 from fs_helpers import *
 
 def randomize_items(self):
@@ -509,7 +510,11 @@ def write_changed_items(self, world_id: int = 0):
   locations = self.worlds[world_id].location_entries
   for location in locations:
     for path in location.filePaths:
-      change_item(self, path, location.current_item.item_id, location.current_item.world_id)
+      if location.current_item.game_item_id == 0xB1:
+        location.current_item.game_item_id = GameItem.random_junk_id(self.rng)
+      if location.current_item.world_id == -1:
+        location.current_item.world_id = world_id
+      change_item(self, path, location.current_item.game_item_id, (location.current_item.world_id + 1))
 
 def change_item(self, path: str, item_id: int, world_id: int = 0):
   
