@@ -4,7 +4,7 @@ import os
 
 from classes.gameitem import *
 from classes.world import World
-from data.extras import item_id_dict, capital_case_with_space, chart_macro_to_island
+from logic.extras import item_id_dict, capital_case_with_space, chart_macro_to_island
 
 def generate_spoiler_log(worlds: list[World], output_folder, output_file_name):
     with open(os.path.join(output_folder, ("WW" + output_file_name +"- Spoiler Log.txt")), 'w') as spoiler_log_file:

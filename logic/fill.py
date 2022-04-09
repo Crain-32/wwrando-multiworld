@@ -1,12 +1,12 @@
 import itertools
 from random import Random
 
-from data.extras import *
+from logic.extras import *
 from classes.gameitem import *
 from classes.location import Location
 from logic.search import locations_reachable, game_beatable, get_accessible_locations
 from classes.world import World
-from logic.spoilerlog import generate_spoiler_log
+
 
 def fill(worlds: list[World], random_state: Random):
     worlds = place_hardcoded_items(worlds)

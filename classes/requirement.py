@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from data.extras import *
+from logic.extras import *
 
 
 @dataclass

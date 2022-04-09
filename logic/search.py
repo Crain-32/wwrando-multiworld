@@ -5,7 +5,7 @@ from classes.gameitem import GameItem
 from classes.location import Location
 from classes.requirement import Requirement
 from classes.world import World
-from data.extras import *
+from logic.extras import *
 from logic.spoilerlog import generate_spoiler_log
 
 called = 0

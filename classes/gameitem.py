@@ -1,7 +1,7 @@
 import random
 from dataclasses import dataclass
 
-from data.extras import item_id_to_name_dict
+from logic.extras import item_id_to_name_dict
 
 ITEM_IS_TRIFORCE_SHARD = 0
 ITEM_IS_PROGRESSIVE = 1

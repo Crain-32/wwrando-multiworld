@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 
-from data.extras import item_id_to_name_dict, capital_case_with_space, item_id_dict
+from logic.extras import item_id_to_name_dict, capital_case_with_space, item_id_dict
 
 SWORDLESS = "Swordless"
 START_WITH_SWORD = "Start with Hero's Sword"

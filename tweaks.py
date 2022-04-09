@@ -1,7 +1,6 @@
 
 import re
 import os
-from io import BytesIO
 from collections import namedtuple
 from collections import OrderedDict
 import copy
@@ -9,7 +8,7 @@ from random import Random
 import math
 
 from classes.location import Location
-from data.extras import DUNGEON_NAME_DICT
+from logic.extras import DUNGEON_NAME_DICT
 from fs_helpers import *
 from asm import patcher
 from wwlib import texture_utils

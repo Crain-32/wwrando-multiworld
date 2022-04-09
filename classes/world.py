@@ -7,7 +7,7 @@ from classes.gameitem import GameItem, junk_item_check
 from classes.location import Location
 from classes.requirement import Macro, Requirement
 from classes.settings import Settings
-from data.extras import *
+from logic.extras import *
 from logic.item_pool import generate_game_item_pool, generate_starting_items, dungeons
 from wwrando_paths import DATA_PATH
 
