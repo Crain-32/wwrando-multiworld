@@ -42,8 +42,8 @@ class GameItem:
         return GameItem(game_item_id=item_val, world_id=world_id, junk_item=True)
 
     @staticmethod
-    def random_junk_id(rando):
-        return rando.choice(junk_ids)
+    def random_junk_id(randomizer):
+        return randomizer.rng.choice(junk_ids)
 
     def __eq__(self, game_item) -> bool:
         return self.game_item_id == game_item.game_item_id and self.world_id == game_item.world_id

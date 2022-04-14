@@ -218,6 +218,10 @@ class WWRandomizerWindow(QMainWindow):
     self.ui.current_health.setText(text)
   
   def randomize(self):
+    if int(self.get_option_value("world_id")) <= 0 or int(self.get_option_value("world_id")) > int(self.get_option_value("world_count")):
+      QMessageBox.warning(self, "Improper Multiworld Config", f"""World Id must be between 1 and {self.get_option_value("world_count")}""")
+      print("Finished")
+      return
     clean_iso_path = self.settings["clean_iso_path"].strip()
     output_folder = self.settings["output_folder"].strip()
     self.settings["clean_iso_path"] = clean_iso_path
@@ -246,6 +250,7 @@ class WWRandomizerWindow(QMainWindow):
     options = OrderedDict()
     for option_name in OPTIONS:
       options[option_name] = self.get_option_value(option_name)
+
     
     colors = OrderedDict()
     for color_name in self.get_default_custom_colors_for_current_model():
@@ -451,7 +456,7 @@ class WWRandomizerWindow(QMainWindow):
       options[option_name] = self.get_option_value(option_name)
     num_progress_locations = 10
     
-    text = "Where Should Progress Items Appear? (Selected: %d Possible Progression Locations)" % num_progress_locations
+    text = "Where Should Progress Items Appear?"
     self.ui.groupBox.setTitle(text)
   
   def permalink_modified(self):
@@ -1384,8 +1389,9 @@ class WWRandomizerWindow(QMainWindow):
   def open_about(self):
     text = """Wind Waker Randomizer Version %s<br><br>
       Created by LagoLunatic<br><br>
-      Report issues here:<br><a href=\"https://github.com/LagoLunatic/wwrando/issues\">https://github.com/LagoLunatic/wwrando/issues</a><br><br>
-      Source code:<br><a href=\"https://github.com/LagoLunatic/wwrando\">https://github.com/LagoLunatic/wwrando</a>""" % VERSION
+      Multiworld Implemented by CrainWWR<br><br>
+      Join the Discord!<br><a href=\"https://discord.gg/44jYHA7zSA\">https://discord.gg/44jYHA7zSA</a><br><br>
+      Source code:<br><a href=\"https://github.com/Crain-32/Multiworld_Randomizer\">https://github.com/Crain-32/Multiworld_Randomizer</a>""" % VERSION
     
     self.about_dialog = QMessageBox()
     self.about_dialog.setTextFormat(Qt.TextFormat.RichText)
@@ -1487,8 +1493,8 @@ class UpdateCheckerThread(QThread):
   finished_checking_for_updates = Signal(str)
   
   def run(self):
-    new_version = check_for_updates()
-    self.finished_checking_for_updates.emit(new_version)
+    # new_version = check_for_updates()
+    self.finished_checking_for_updates.emit("Currently not Implemented")
 
 # Allow yaml to load and dump OrderedDicts.
 yaml.SafeLoader.add_constructor(

@@ -5219,7 +5219,7 @@
                 {
                     "Name": "OutsetJabunsCaveChest",
                     "OriginalItem": "NayrusPearl",
-                    "Category": ["IslandPuzzle"],
+                    "Category": ["IslandPuzzle", "Multiworld"],
                     "Needs": { "type": "has_item","args": ["Nothing"]},
                     "Paths": [
                         "main.dol@8035BD39",

@@ -36,8 +36,8 @@ def apply_patch(self, patch_name):
           add_or_extend_main_dol_free_space_section(self, new_bytes, org_address)
           continue
         else:
-          if patch_name == "multiworld_scripts":
-            print("{} is located at Address {:02X}".format(patch_name, org_address))
+          # if patch_name == "multiworld_scripts":
+          #   print("{} is located at Address {:02X}".format(patch_name, org_address))
           self.dol.write_data(write_and_pack_bytes, org_address, new_bytes, "B"*len(new_bytes))
       else:
         assert file_path.endswith(".rel")

@@ -218,7 +218,7 @@ class Randomizer:
         tweaks.test_room(self)
     options_completed += 1
     
-    yield("Randomizing...", options_completed)
+    yield("Creating Worlds...", options_completed)
 
     for world_id in range(int(self.options.get("world_count"))):
       world = World(Settings(self.options), world_id)
@@ -257,7 +257,7 @@ class Randomizer:
       palettes.randomize_enemy_palettes(self)
       options_completed += 10
     
-    yield("Randomizing items...", options_completed)
+    yield("Randomizing items...\nThis may take some time", options_completed)
     if self.randomize_items:
       self.reset_rng()
       self.worlds = fill(self.worlds, self.rng)

@@ -511,7 +511,7 @@ def write_changed_items(self, world_id: int = 0):
   for location in locations:
     for path in location.filePaths:
       if location.current_item.game_item_id == 0xB1:
-        location.current_item.game_item_id = GameItem.random_junk_id(self.rng)
+        location.current_item.game_item_id = GameItem.random_junk_id(self)
       if location.current_item.world_id == -1:
         location.current_item.world_id = world_id
       change_item(self, path, location.current_item.game_item_id, (location.current_item.world_id + 1))
