@@ -36,6 +36,7 @@ from randomizers import entrances
 from randomizers import music
 from randomizers import enemies
 from randomizers import palettes
+from logic.extras import *
 
 with open(os.path.join(RANDO_ROOT_PATH, "version.txt"), "r") as f:
   VERSION = f.read().strip()
@@ -219,7 +220,7 @@ class Randomizer:
     options_completed += 1
     
     yield("Creating Worlds...", options_completed)
-
+    self.worlds.clear()
     for world_id in range(int(self.options.get("world_count"))):
       world = World(Settings(self.options), world_id)
       world.load_world()

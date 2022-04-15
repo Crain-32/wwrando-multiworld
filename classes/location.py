@@ -11,9 +11,9 @@ class Location:
     area_name: str
     requirement: Requirement
     filePaths: list[str]
+    current_item: GameItem
     world_id: int = -1
     logical: bool = False
-    current_item: GameItem = GameItem(game_item_id=item_id_dict["Nothing"])
 
     @staticmethod
     def from_dict(dict_obj, area_name: str):
@@ -21,7 +21,8 @@ class Location:
                         category_set=list(dict_obj["Category"]),
                         requirement=Requirement.from_dict(dict_obj["Needs"]),
                         filePaths=dict_obj["Paths"],
-                        area_name=area_name
+                        area_name=area_name,
+                        current_item=GameItem(game_item_id=item_id_dict["Nothing"])
                         )
 
     def is_logical_location(self):
