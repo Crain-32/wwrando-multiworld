@@ -5,17 +5,16 @@ custom_write_item_world_id:
   stwu sp, -0x10 (sp)
   mflr r0
   stw r0, 0x14 (sp)
+
   lis r5, world_id@ha
   addi r5, r5, world_id@l
   lha r0, 0x1DC(r30)
   rlwinm r0, r0, 0x18, 0x18, 0x1f
   stw r0, 0x0(r5)
 
-  lis r5, item_id@ha
-  addi r5, r5, item_id@l
+
   lha r0, 0x1E0(r30)
   rlwinm r4, r0, 0x18, 0x18, 0x1f
-  stw r4, 0x0(r5)
 
   lwz r0, 0x14 (sp)
   mtlr r0
@@ -69,6 +68,41 @@ store_salvage_world_id:
   blr
 
 
+.global get_item_detour
+get_item_detour:
+  stwu sp, -0x10 (sp)
+  mflr r0
+  stw r0, 0x14 (sp)
+
+  lis r12, item_id@ha
+  addi r12, r12, item_id@l
+  stb r3, 0x3(r12)
+
+  lis r12, world_id@ha
+  addi r12, r12, world_id@l
+  lbz r12, 0x3(r12)
+.global inject_world_id
+  inject_world_id:
+  cmpwi r12, 0x01          ; This World's ID needs to be inject here
+  beq give_item_to_player  ; Jump to giving item
+  cmpwi r12, 0x00          ; Compare the Item's World ID to Zero. Handles Normal Items
+  bne skip_giving_item     ; This needs to jump to *after* the item giving function resolves
+
+  give_item_to_player:
+  rlwinm r0, r3, 0x2, 0x16, 0x1d
+  lis r3, -0x7fc7
+  subi r3, r3, 0x7738
+  lwzx r12, r3, r0
+  mtctr r12
+  bctrl
+
+  skip_giving_item:
+  lwz r0, 0x14 (sp)
+  mtlr r0
+  addi sp, sp, 0x10
+  blr
+
+
 .global world_id
 world_id:
   nop
@@ -76,9 +110,17 @@ world_id:
 item_id:
   nop
 
+
+.org 0x800C2E08
+  bl get_item_detour
+  nop
+  nop
+  nop
+  nop
+  nop
 .close
 
-.open "files/rels/d_a_tbox.rel" ; Treasure chests
+.open "files/rels/d_a_tbox.rel" ; Treasure Chests
 .org 0x2764 ; In actionOpenWait__8daTbox_cFv
   bl custom_write_item_world_id
 .close
@@ -90,3 +132,4 @@ item_id:
 .org 0x800CCBDC
   bl store_salvage_world_id
 .close
+

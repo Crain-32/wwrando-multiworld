@@ -1,17 +1,15 @@
 import glob
-import re
-from subprocess import call
 import os
-import tempfile
+import re
 import shutil
-from collections import OrderedDict
-import struct
-import yaml
-import traceback
 import sys
+import tempfile
+import traceback
+from subprocess import call
+
+import yaml
 
 sys.path.insert(0, "../")
-from fs_helpers import *
 from elf import *
 
 if sys.platform == "win32":
@@ -49,7 +47,6 @@ yaml.CDumper.add_representer(
 
 temp_dir = tempfile.mkdtemp()
 print(temp_dir)
-print()
 
 custom_symbols = OrderedDict()
 custom_symbols["sys/main.dol"] = OrderedDict()
@@ -103,8 +100,6 @@ def compile_c_to_asm(c_src_path):
     "-c", c_src_path,
     "-o", asm_path,
   ]
-  print(" ".join(command))
-  print()
   result = call(command)
   if result != 0:
     raise Exception("Compiler call failed")
@@ -223,7 +218,6 @@ try:
       asm = f.read()
     
     asm_with_includes = parse_includes(asm)
-    #print(asm_with_includes)
     
     patch_name = os.path.splitext(patch_filename)[0]
     code_chunks[patch_name] = OrderedDict()
@@ -382,8 +376,6 @@ try:
           temp_asm_name,
           "-o", o_name
         ]
-        print(" ".join(command))
-        print()
         result = call(command)
         if result != 0:
           raise Exception("Assembler call failed")
@@ -426,8 +418,6 @@ try:
         else:
           # For main, just output the raw binary code, not an ELF.
           command += ["--oformat", "binary"]
-        print(" ".join(command))
-        print()
         result = call(command)
         if result != 0:
           raise Exception("Linker call failed")

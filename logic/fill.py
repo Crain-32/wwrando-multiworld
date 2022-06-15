@@ -1,20 +1,20 @@
 import itertools
 from random import Random
 
-from logic.extras import *
 from classes.gameitem import *
 from classes.location import Location
-from logic.search import locations_reachable, game_beatable, get_accessible_locations
 from classes.world import World
+from logic.extras import *
+from logic.search import locations_reachable, game_beatable, get_accessible_locations
 
 
 def fill(worlds: list[World], random_state: Random):
     worlds = place_hardcoded_items(worlds)
 
     worlds = determine_major_items(worlds, random_state)
-    # dump_object(worlds, "major_items")
+    dump_object(worlds, "major_items")
     worlds = place_race_mode_items(worlds, random_state)
-
+    dump_simple_world_locations(worlds, "place_race_mode")
     # Dungeon Items are not consistent, getting dumped after this function
     worlds = handle_dungeon_items(worlds, random_state)
     item_pool = get_item_pool(worlds)
@@ -122,9 +122,16 @@ def handle_dungeon_items(worlds: list[World], random_state: Random) -> list[Worl
     for world in worlds:
         for dungeon_name in DUNGEON_NAMES:
             if not world.world_settings.keylunacy:
+                print(dungeon_name)
                 dungeon_locations = [location for location in world.get_specific_dungeon_locations(dungeon_name)]
+
+                for dloc in dungeon_locations:
+                    print(dloc.spoiler_representation())
+
                 logical_locations = list(filter((lambda loc: loc.current_item.game_item_id == item_id_dict["Nothing"]),
                                                 world.determine_progression_locations_from_list(dungeon_locations)))
+                for loc in logical_locations:
+                    print(loc.spoiler_representation())
 
                 dungeon_keys = [keys for keys in world.get_dungeon_keys(dungeon_name)]
                 worlds = assumed_fill(worlds, dungeon_keys, logical_locations, random_state, world.world_id)

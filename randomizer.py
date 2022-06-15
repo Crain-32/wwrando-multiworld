@@ -1,40 +1,35 @@
+import hashlib
 import itertools
 import os
-import re
 from random import Random
-from collections import OrderedDict
-import hashlib
+
 import yaml
 
+import customizer
+import tweaks
+from asm import disassemble
+from asm import patcher
+from classes.settings import Settings
+from classes.world import World
 from fs_helpers import *
-from wwlib.yaz0 import Yaz0
-from wwlib.rarc import RARC
+from logic.fill import fill
+from logic.logic import Logic
+from logic.spoilerlog import generate_spoiler_log
+from wwlib import stage_searcher
 from wwlib.dol import DOL
-from wwlib.rel import REL, RELRelocation, RELRelocationType
 from wwlib.gcm import GCM
 from wwlib.jpc import JPC
-import tweaks
-from asm import patcher
-from logic.logic import Logic
+from wwlib.rarc import RARC
+from wwlib.rel import REL, RELRelocation, RELRelocationType
+from wwlib.yaz0 import Yaz0
 from wwrando_paths import DATA_PATH, ASM_PATH, RANDO_ROOT_PATH, IS_RUNNING_FROM_SOURCE
-import customizer
-from wwlib import stage_searcher
-from asm import disassemble
-from classes.world import World
-from classes.settings import Settings
-from logic.fill import fill
-from logic.spoilerlog import generate_spoiler_log
+
 try:
   from keys.seed_key import SEED_KEY
 except ImportError:
   SEED_KEY = ""
 
 from randomizers import items
-from randomizers import charts
-from randomizers import starting_island
-from randomizers import entrances
-from randomizers import music
-from randomizers import enemies
 from randomizers import palettes
 from logic.extras import *
 
@@ -369,6 +364,7 @@ class Randomizer:
       tweaks.update_battlesquid_item_names(self, locations)
       tweaks.update_item_names_in_letter_advertising_rock_spire_shop(self, locations)
       tweaks.update_savage_labyrinth_hint_tablet(self, locations)
+    tweaks.insert_world_id(self, world_id)
     tweaks.show_quest_markers_on_sea_chart_for_dungeons(self, dungeon_names=self.worlds[world_id].race_mode_dungeons)
     tweaks.prevent_fire_mountain_lava_softlock(self)
   

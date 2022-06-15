@@ -1,7 +1,7 @@
 import json
 import re
-from dataclasses import asdict
 from collections import OrderedDict
+from dataclasses import asdict
 
 # Replaces the WorldLoadingError Enum Struct in World.hpp
 NONE = "NONE"
@@ -404,10 +404,10 @@ def dump_object(obj, filename: str):
         json.dump(inp, output, indent='\t')
 
 def capital_case_with_space(original_str: str) -> str:
-    pattern = re.compile("[A-Z]([a-z]*)")
+    pattern = re.compile("[A-Z]([a-z]*)|([0-9]*)")
     matches = list(map((lambda m: m.group()), pattern.finditer(original_str)))
     if len(matches) > 0:
-        return " ".join(matches)
+        return " ".join(matches).strip()
     else:
         return original_str
 

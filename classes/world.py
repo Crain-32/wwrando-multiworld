@@ -32,6 +32,8 @@ class World:
         self.race_mode_dungeons = []
         self.play_through_spheres = []
         self.assumed_items = []
+        self.starting_items = []
+        self.item_pool = []
 
     def __hash__(self):
         return hash(self.world_id)
@@ -267,6 +269,7 @@ class World:
         with open(world_location) as world_loc:
             area_file = json.load(world_loc)
             area_list = list(map((lambda create: Area.with_world_id(create, world_id)), area_file["Areas"]))
+            dump_object(area_list, f"area-list-{world_id}")
             return {area.name : area for area in area_list}
 
 

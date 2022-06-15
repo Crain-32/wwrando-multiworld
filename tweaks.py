@@ -1,20 +1,20 @@
 
-import re
-import os
-from collections import namedtuple
-from collections import OrderedDict
 import copy
-from random import Random
 import math
+import os
+import re
+from collections import OrderedDict
+from collections import namedtuple
+from random import Random
 
-from classes.location import Location
-from logic.extras import DUNGEON_NAME_DICT
-from fs_helpers import *
+import customizer
 from asm import patcher
+from classes.location import Location
+from fs_helpers import *
+from logic.extras import DUNGEON_NAME_DICT
 from wwlib import texture_utils
 from wwlib.rel import REL
 from wwrando_paths import ASSETS_PATH, ASM_PATH, SEEDGEN_PATH
-import customizer
 
 try:
   from keys.seed_key import SEED_KEY
@@ -881,6 +881,9 @@ def update_savage_labyrinth_hint_tablet(self, locations: list[Location]):
     "\\{1A 06 FF 00 00 00}Deep in the never-ending darkness, the way to %s." % hint,
     max_line_length=43
   )
+
+def insert_world_id(randomizer, world_id: int):
+  randomizer.dol.write_data(write_u8, randomizer.main_custom_symbols["inject_world_id"] + 3, world_id + 1)
 
 def randomize_and_update_hints(self):
   hints = []
