@@ -108,8 +108,8 @@ item_id_dict = {
     "SmallKey": 0x15,
     "Fairy(Pickup)": 0x16,
     "YellowRupee(Joke Message)": 0x1A,
-    "DRCDungeonMap": 0x1B,
-    "DRCDungeonCompass": 0x1C,
+    "DRCMap": 0x1B,
+    "DRCCompass": 0x1C,
     "FWSmallKey": 0x1D,
     "ThreeHearts(Pickup)": 0x1E,
     "JoyPendant": 0x1F,
@@ -167,11 +167,11 @@ item_id_dict = {
     "FairyinBottle": 0x57,
     "ForestFirefly": 0x58,
     "ForestWater": 0x59,
-    "FWDungeonCompass": 0x5A,
+    "FWCompass": 0x5A,
     "TotGSmallKey": 0x5B,
     "TotGBigKey": 0x5C,
     "TotGDungeonMap": 0x5D,
-    "TotGDungeonCompass": 0x5E,
+    "TotGCompass": 0x5E,
     "FFDungeonMap": 0x5F,
     "FFDungeonCompass": 0x60,
     "TriforceShard1": 0x61,
@@ -194,7 +194,7 @@ item_id_dict = {
     "ETSmallKey": 0x73,
     "ETBigKey": 0x74,
     "ETDungeonMap": 0x75,
-    "ETDungeonCompass": 0x76,
+    "ETCompass": 0x76,
     "WTSmallKey": 0x77,
     "BoatsSail": 0x78,
     "Triforce Chart 1 got deciphered": 0x79,
@@ -209,7 +209,7 @@ item_id_dict = {
     "All-PurposeBait": 0x82,
     "HyoiPear": 0x83,
     "WTDungeonMap": 0x84,
-    "WTDungeonCompass": 0x85,
+    "WTCompass": 0x85,
     "TownFlower": 0x8C,
     "SeaFlower": 0x8D,
     "ExoticFlower": 0x8E,
@@ -396,12 +396,13 @@ def handle_lists(obj: list):
     return result
 
 def dump_object(obj, filename: str):
-    if isinstance(obj, list):
-        inp = handle_lists(obj)
-    else:
-        inp = asdict(obj)
-    with open("./dump/" + filename + ".json", 'w') as output:
-        json.dump(inp, output, indent='\t')
+    return
+    # if isinstance(obj, list):
+    #     inp = handle_lists(obj)
+    # else:
+    #     inp = asdict(obj)
+    # with open("./dump/" + filename + ".json", 'w') as output:
+    #     json.dump(inp, output, indent='\t')
 
 def capital_case_with_space(original_str: str) -> str:
     pattern = re.compile("[A-Z]([a-z]*)|([0-9]*)")
