@@ -1,4 +1,3 @@
-import json
 import re
 from collections import OrderedDict
 from dataclasses import asdict
@@ -108,7 +107,7 @@ item_id_dict = {
     "SmallKey": 0x15,
     "Fairy(Pickup)": 0x16,
     "YellowRupee(Joke Message)": 0x1A,
-    "DRCMap": 0x1B,
+    "DRCDungeonMap": 0x1B,
     "DRCCompass": 0x1C,
     "FWSmallKey": 0x1D,
     "ThreeHearts(Pickup)": 0x1E,
@@ -413,14 +412,15 @@ def capital_case_with_space(original_str: str) -> str:
         return original_str
 
 def dump_simple_world_locations(worlds, output_filename: str) -> None:
-    output = list()
-    if isinstance(worlds, list):
-        for world in worlds:
-            output.extend(simple_loc_parse(world))
-    else:
-        output = simple_loc_parse(worlds)
-    with open("./dump/" + output_filename + ".json", 'w') as output_file:
-        json.dump(output, output_file, indent='\t')
+    return
+    # output = list()
+    # if isinstance(worlds, list):
+    #     for world in worlds:
+    #         output.extend(simple_loc_parse(world))
+    # else:
+    #     output = simple_loc_parse(worlds)
+    # with open("./dump/" + output_filename + ".json", 'w') as output_file:
+    #     json.dump(output, output_file, indent='\t')
 
 def simple_loc_parse(world):
     return [location.json_output() for location in world.location_entries]

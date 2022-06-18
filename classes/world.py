@@ -172,18 +172,19 @@ class World:
 
 
     def dump_world_graph(self, filename: str):
-        with open("./dump/" + filename + ".dot", 'w') as world_dump:
-            world_dump.write("digraph {\n\tcenter=true;\n")
-            for area in self.area_entries.values():
-                color = '"black"' if area.is_accessible else '"red"'
-                world_dump.write(f'\t"{area.name}"[shape="plain" fontcolor={color}];\n')
-                for exits in area.exits.values():
-                    world_dump.write(f'\t"{area.name}"->"{exits.name}"\n')
-
-                for location in area.locations:
-                    world_dump.write(f'\t"{location.name}"[label=<{location.name}:<br/>{item_id_to_name_dict[location.current_item.game_item_id]}> shape="plain" fontcolor={color}];\n')
-                    world_dump.write(f'\t"{area.name}" -> "{location.name}"[dir=forward colors={color}]\n')
-            world_dump.write("}")
+        return
+        # with open("./dump/" + filename + ".dot", 'w') as world_dump:
+        #     world_dump.write("digraph {\n\tcenter=true;\n")
+        #     for area in self.area_entries.values():
+        #         color = '"black"' if area.is_accessible else '"red"'
+        #         world_dump.write(f'\t"{area.name}"[shape="plain" fontcolor={color}];\n')
+        #         for exits in area.exits.values():
+        #             world_dump.write(f'\t"{area.name}"->"{exits.name}"\n')
+        #
+        #         for location in area.locations:
+        #             world_dump.write(f'\t"{location.name}"[label=<{location.name}:<br/>{item_id_to_name_dict[location.current_item.game_item_id]}> shape="plain" fontcolor={color}];\n')
+        #             world_dump.write(f'\t"{area.name}" -> "{location.name}"[dir=forward colors={color}]\n')
+        #     world_dump.write("}")
 
 
     @staticmethod
