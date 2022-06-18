@@ -1,5 +1,6 @@
 import itertools
 import os
+import json
 from dataclasses import dataclass, field
 
 from classes.area import Area
