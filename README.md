@@ -19,7 +19,7 @@ Location types that you don't select will only have unimportant items that you d
 If you seem to be stuck and can't find anywhere to progress, you should first consult the spoiler log. The spoiler log is generated at the same time as the randomized ISO, and is put in the same folder. It contains information on everything that was randomized in this seed, and lists the order you can get progress items in as well.
 
 If you've consulted the spoiler log and you're still stuck, it's possible you've encountered a bug in the randomizer.  
-Please report bugs like that here: https://github.com/LagoLunatic/wwrando/issues  
+Please report bugs like that in the Multiplayer Discord - https://discord.gg/44jYHA7zSA
 In the bug report be sure to include the permalink for the seed you encountered the bug on.
 
 If you're going to play on emulator, you should use the latest development version of Dolphin which can be found at the top of this page: https://dolphin-emu.org/download/  
@@ -34,7 +34,8 @@ https://discord.gg/r2963mt
 
 ## Credits
 
-The randomizer was created and programmed by LagoLunatic, with help from:  
+This Fork of the randomizer was created and programmed by CrainWWR, with help from:
+LagoLunatic (Official Randomizer Creator, this is only possible because of them)
 CryZe (event flag documentation)  
 Gamma / SageOfMirrors (custom model conversion, file format documentation)  
 Hypatia (textures)  
@@ -43,7 +44,9 @@ LordNed (file format documentation)
 MelonSpeedruns (game design suggestions, graphic design)  
 nbouteme (additional programming)  
 TrogWW (additional programming)  
-wooferzfg (additional programming)  
+wooferzfg (additional programming)
+Gymnast86 (New Randomization Logic Base)
+Tanjo3 (Hints)
 
 ## Running the randomizer from source
 
