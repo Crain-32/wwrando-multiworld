@@ -5,8 +5,6 @@ This is a randomizer for The Legend of Zelda: The Wind Waker.
 It randomizes all the items in the game so that each playthrough is unique and you never know where a particular item will be.  
 It also makes the game completely open world from the start, removes most cutscenes from the game, and increases sailing speed and text speed.
 
-**You can download the randomizer here: https://github.com/LagoLunatic/wwrando/releases/latest**
-
 ## Information
 
 The randomizer only supports the North American GameCube version of Wind Waker. (MD5: d8e4d45af2032a081a0f446384e9261b)  
@@ -28,8 +26,10 @@ If you're going to play on emulator, you should use the latest development versi
 Note that the GameCube boot up animation in Dolphin doesn't work with the randomizer and will cause the game to crash before reaching the main menu. If you have previously set Dolphin up to play that animation you will need to disable it before launching the randomized game by going to Config -> GameCube in Dolphin and checking "Skip Main Menu".  
 
 ## Discord Server
+This version of the randomizer is a specific Fork of the main Randomizer. For questions related to the Multiplayer Experience, feel free to join the Discord!
+https://discord.gg/44jYHA7zSA
 
-If you have any questions or are looking for people to play/race with, why not join the official Wind Waker Randomizer Discord server?  
+If you have questions about Modding the Wind Waker Randomizer, feel free to join the Main Discord!
 https://discord.gg/r2963mt
 
 ## Credits
