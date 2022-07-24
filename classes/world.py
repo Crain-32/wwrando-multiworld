@@ -33,8 +33,6 @@ class World:
         self.race_mode_dungeons = []
         self.play_through_spheres = []
         self.assumed_items = []
-        self.starting_items = []
-        self.item_pool = []
 
     def __hash__(self):
         return hash(self.world_id)
@@ -173,19 +171,18 @@ class World:
 
 
     def dump_world_graph(self, filename: str):
-        return
-        # with open("./dump/" + filename + ".dot", 'w') as world_dump:
-        #     world_dump.write("digraph {\n\tcenter=true;\n")
-        #     for area in self.area_entries.values():
-        #         color = '"black"' if area.is_accessible else '"red"'
-        #         world_dump.write(f'\t"{area.name}"[shape="plain" fontcolor={color}];\n')
-        #         for exits in area.exits.values():
-        #             world_dump.write(f'\t"{area.name}"->"{exits.name}"\n')
-        #
-        #         for location in area.locations:
-        #             world_dump.write(f'\t"{location.name}"[label=<{location.name}:<br/>{item_id_to_name_dict[location.current_item.game_item_id]}> shape="plain" fontcolor={color}];\n')
-        #             world_dump.write(f'\t"{area.name}" -> "{location.name}"[dir=forward colors={color}]\n')
-        #     world_dump.write("}")
+        with open("./dump/" + filename + ".dot", 'w') as world_dump:
+            world_dump.write("digraph {\n\tcenter=true;\n")
+            for area in self.area_entries.values():
+                color = '"black"' if area.is_accessible else '"red"'
+                world_dump.write(f'\t"{area.name}"[shape="plain" fontcolor={color}];\n')
+                for exits in area.exits.values():
+                    world_dump.write(f'\t"{area.name}"->"{exits.name}"\n')
+
+                for location in area.locations:
+                    world_dump.write(f'\t"{location.name}"[label=<{location.name}:<br/>{item_id_to_name_dict[location.current_item.game_item_id]}> shape="plain" fontcolor={color}];\n')
+                    world_dump.write(f'\t"{area.name}" -> "{location.name}"[dir=forward colors={color}]\n')
+            world_dump.write("}")
 
 
     @staticmethod
@@ -225,6 +222,7 @@ class World:
     def get_race_mode_bosses(self):
         boss_loc = []
         for dungeon_name in self.race_mode_dungeons:
+            dump_object(self.get_specific_dungeon_locations(dungeon_name), dungeon_name + "race_mode_locations")
             boss_loc.append(self.get_specific_dungeon_locations(dungeon_name)[-1])
         return boss_loc
 

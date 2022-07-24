@@ -7,10 +7,11 @@ from classes.requirement import Requirement
 from classes.world import World
 from logic.extras import *
 from logic.spoilerlog import generate_spoiler_log
+from typing import List, AnyStr
 
 called = 0
 
-def evaluate_requirement(world: World, requirement: Requirement, owned_items: list[GameItem]) -> bool:
+def evaluate_requirement(world: World, requirement: Requirement, owned_items: List[GameItem]) -> bool:
     if requirement.type == REQUIREMENT_OR:
         return any(
             map((lambda args: evaluate_requirement(world, args, owned_items) == True), requirement.args)
@@ -58,7 +59,7 @@ def evaluate_requirement(world: World, requirement: Requirement, owned_items: li
         raise RuntimeError(f"Requirement was 'None': {requirement} for World {world}")
     return False
 
-def explore(worlds: list[World], items: list[list[GameItem]], area: Area, exits_to_try: list[Exit], locations_to_try: list[Location]) -> list[Location]:
+def explore(worlds: List[World], items: List[List[GameItem]], area: Area, exits_to_try: List[Exit], locations_to_try: List[Location]) -> List[Location]:
 
     for exit_connection in area.exits.values():
         connect_area = worlds[exit_connection.world_id].area_entries[exit_connection.name]
@@ -79,7 +80,7 @@ def explore(worlds: list[World], items: list[list[GameItem]], area: Area, exits_
     return locations_to_try
 
 
-def search(search_mode: str, worlds: list[World], input_items: list[GameItem], world_id = -1):
+def search(search_mode: AnyStr, worlds: List[World], input_items: List[GameItem], world_id = -1):
     assumed_items = list()
     for world in worlds:
         assumed_items.append(world.starting_items.copy())
@@ -137,7 +138,7 @@ def search(search_mode: str, worlds: list[World], input_items: list[GameItem], w
 
     return accessible_locations
 
-def get_accessible_locations(worlds: list[World], assumed_items: list[GameItem], allowed_locations: list[Location], world_to_search= -1) -> list[Location]:
+def get_accessible_locations(worlds: List[World], assumed_items: List[GameItem], allowed_locations: List[Location], world_to_search= -1) -> List[Location]:
     accessible_locations = search(SEARCH_ACCESSIBLE_LOCATIONS, worlds, assumed_items, world_to_search)
     return [location for location in accessible_locations
                 if location.current_item.game_item_id == item_id_dict["Nothing"]
@@ -150,7 +151,7 @@ def game_beatable(worlds):
     return len(worlds) == len(worlds_beatable)
 
 # Whittle down the playthrough to only the items which are required to beat the game
-def pare_down_playthrough(worlds: list[World]) -> list[World]:
+def pare_down_playthrough(worlds: List[World]) -> List[World]:
     playthrough_spheres = worlds[0].play_through_spheres
     for sphere in range(0, len(playthrough_spheres)):
         for location in playthrough_spheres[sphere]:
@@ -165,14 +166,14 @@ def pare_down_playthrough(worlds: list[World]) -> list[World]:
     worlds[0].play_through_spheres = playthrough_spheres
     return worlds
 
-def generate_playthrough(worlds: list[World]):
+def generate_playthrough(worlds: List[World]):
     search(SEARCH_GENERATE_PLAYTHROUGH, worlds, [])
     worlds = pare_down_playthrough(worlds)
     generate_spoiler_log(worlds)
 
 
-def locations_reachable(worlds: list[World], items: list[GameItem],
-                        locations_to_check: list[Location], world_to_search: int) -> bool:
+def locations_reachable(worlds: List[World], items: List[GameItem],
+                        locations_to_check: List[Location], world_to_search: int) -> bool:
     accessible_locations = search(SEARCH_ACCESSIBLE_LOCATIONS, worlds, items, world_to_search)
 
     if len(locations_to_check) < len(accessible_locations):

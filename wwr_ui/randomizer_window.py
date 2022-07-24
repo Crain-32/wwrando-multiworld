@@ -540,12 +540,12 @@ class WWRandomizerWindow(QMainWindow):
     given_version_num, seed, options_bytes = permalink.split(b"\0", 2)
     given_version_num = given_version_num.decode("ascii")
     seed = seed.decode("ascii")
-    if given_version_num != VERSION:
-      QMessageBox.critical(
-        self, "Invalid permalink",
-        "The permalink you pasted is for version %s of the randomizer, it cannot be used with the version you are currently using (%s)." % (given_version_num, VERSION)
-      )
-      return
+    # if given_version_num != VERSION:
+    #   QMessageBox.critical(
+    #     self, "Invalid permalink",
+    #     "The permalink you pasted is for version %s of the randomizer, it cannot be used with the version you are currently using (%s)." % (given_version_num, VERSION)
+    #   )
+    #   return
     
     self.ui.seed.setText(seed)
     

@@ -11,7 +11,7 @@ class Location:
     area_name: str
     requirement: Requirement
     filePaths: list[str]
-    current_item: GameItem
+    current_item: GameItem = GameItem(game_item_id=item_id_dict["Nothing"])
     world_id: int = -1
     logical: bool = False
 
@@ -21,8 +21,7 @@ class Location:
                         category_set=list(dict_obj["Category"]),
                         requirement=Requirement.from_dict(dict_obj["Needs"]),
                         filePaths=dict_obj["Paths"],
-                        area_name=area_name,
-                        current_item=GameItem(game_item_id=item_id_dict["Nothing"])
+                        area_name=area_name
                         )
 
     def is_logical_location(self):

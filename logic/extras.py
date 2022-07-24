@@ -1,8 +1,10 @@
 import re
 from collections import OrderedDict
 from dataclasses import asdict
+import json
 
 # Replaces the WorldLoadingError Enum Struct in World.hpp
+
 NONE = "NONE"
 DUPLICATE_MACRO_NAME = "DUPLICATE_MACRO_NAME"
 MACRO_DOES_NOT_EXIST = "MACRO_DOES_NOT_EXIST"
@@ -108,7 +110,7 @@ item_id_dict = {
     "Fairy(Pickup)": 0x16,
     "YellowRupee(Joke Message)": 0x1A,
     "DRCDungeonMap": 0x1B,
-    "DRCCompass": 0x1C,
+    "DRCDungeonCompass": 0x1C,
     "FWSmallKey": 0x1D,
     "ThreeHearts(Pickup)": 0x1E,
     "JoyPendant": 0x1F,
@@ -166,11 +168,11 @@ item_id_dict = {
     "FairyinBottle": 0x57,
     "ForestFirefly": 0x58,
     "ForestWater": 0x59,
-    "FWCompass": 0x5A,
+    "FWDungeonCompass": 0x5A,
     "TotGSmallKey": 0x5B,
     "TotGBigKey": 0x5C,
     "TotGDungeonMap": 0x5D,
-    "TotGCompass": 0x5E,
+    "TotGDungeonCompass": 0x5E,
     "FFDungeonMap": 0x5F,
     "FFDungeonCompass": 0x60,
     "TriforceShard1": 0x61,
@@ -193,7 +195,7 @@ item_id_dict = {
     "ETSmallKey": 0x73,
     "ETBigKey": 0x74,
     "ETDungeonMap": 0x75,
-    "ETCompass": 0x76,
+    "ETDungeonCompass": 0x76,
     "WTSmallKey": 0x77,
     "BoatsSail": 0x78,
     "Triforce Chart 1 got deciphered": 0x79,
@@ -208,7 +210,7 @@ item_id_dict = {
     "All-PurposeBait": 0x82,
     "HyoiPear": 0x83,
     "WTDungeonMap": 0x84,
-    "WTCompass": 0x85,
+    "WTDungeonCompass": 0x85,
     "TownFlower": 0x8C,
     "SeaFlower": 0x8D,
     "ExoticFlower": 0x8E,
@@ -394,14 +396,18 @@ def handle_lists(obj: list):
             result.append(asdict(thing))
     return result
 
-def dump_object(obj, filename: str):
-    return
-    # if isinstance(obj, list):
-    #     inp = handle_lists(obj)
-    # else:
-    #     inp = asdict(obj)
-    # with open("./dump/" + filename + ".json", 'w') as output:
-    #     json.dump(inp, output, indent='\t')
+def dump_object(obj, filename: str, write_str: bool = False):
+    if isinstance(obj, list):
+        inp = handle_lists(obj)
+    elif write_str:
+        with open("./dump/" + filename + ".txt", 'w') as output:
+            print(str(obj))
+            output.write(str(obj))
+        return
+    else:
+        inp = asdict(obj)
+    with open("./dump/" + filename + ".json", 'w') as output:
+        json.dump(inp, output, indent='\t')
 
 def capital_case_with_space(original_str: str) -> str:
     pattern = re.compile("[A-Z]([a-z]*)|([0-9]*)")
@@ -412,15 +418,14 @@ def capital_case_with_space(original_str: str) -> str:
         return original_str
 
 def dump_simple_world_locations(worlds, output_filename: str) -> None:
-    return
-    # output = list()
-    # if isinstance(worlds, list):
-    #     for world in worlds:
-    #         output.extend(simple_loc_parse(world))
-    # else:
-    #     output = simple_loc_parse(worlds)
-    # with open("./dump/" + output_filename + ".json", 'w') as output_file:
-    #     json.dump(output, output_file, indent='\t')
+    output = list()
+    if isinstance(worlds, list):
+        for world in worlds:
+            output.extend(simple_loc_parse(world))
+    else:
+        output = simple_loc_parse(worlds)
+    with open("./dump/" + output_filename + ".json", 'w') as output_file:
+        json.dump(output, output_file, indent='\t')
 
 def simple_loc_parse(world):
     return [location.json_output() for location in world.location_entries]

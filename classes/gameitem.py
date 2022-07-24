@@ -75,6 +75,12 @@ class GameItem:
             self.item_type = ITEM_IS_UNCATEGORIZED
         return self
 
+    def __str__(self):
+        return f"GameItem(game_item_id={item_id_to_name_dict[self.game_item_id]}, major_true={self.major_item}, " \
+               f"chart_for_sunken_treasure={self.chart_for_sunken_treasure}, junk_item={self.junk_item}, " \
+               f"world_id={self.world_id}, item_id={item_type_to_name[self.item_type]})"
+
+
 def junk_item_check(item: GameItem) -> GameItem:
     item.junk_item = item.game_item_id in junk_item_ids
     return item
