@@ -417,17 +417,17 @@ def handle_lists(obj: list):
             result.append(asdict(thing))
     return result
 
-def dump_object(obj, filename: str, write_str: bool = False):
-    if isinstance(obj, list):
-        inp = handle_lists(obj)
-    elif write_str:
-        with open("./dump/" + filename + ".txt", 'w') as output:
-            output.write(str(obj))
-        return
-    else:
-        inp = asdict(obj)
-    with open("./dump/" + filename + ".json", 'w') as output:
-        json.dump(inp, output, indent='\t')
+# def dump_object(obj, filename: str, write_str: bool = False):
+#     if isinstance(obj, list):
+#         inp = handle_lists(obj)
+#     elif write_str:
+#         with open("./dump/" + filename + ".txt", 'w') as output:
+#             output.write(str(obj))
+#         return
+#     else:
+#         inp = asdict(obj)
+#     with open("./dump/" + filename + ".json", 'w') as output:
+#         json.dump(inp, output, indent='\t')
 
 def capital_case_with_space(original_str: str) -> str:
     pattern = re.compile("[A-Z]([a-z]*)|([0-9]*)")
@@ -436,32 +436,32 @@ def capital_case_with_space(original_str: str) -> str:
         return " ".join(matches).strip()
     else:
         return original_str
-
-def dump_simple_items(obj, filename: AnyStr) -> None:
-    output = list()
-    if isinstance(output, list):
-        output = [str(item) for item in obj]
-    else:
-        output.append(str(obj))
-    with open("./dump/" + filename + ".json", 'w') as output_file:
-        output_file.writelines(output)
-
-def dump_simple_world_locations(worlds: List[Any] | Any, output_filename: str) -> None:
-    output = list()
-    if isinstance(worlds, list):
-        for world in worlds:
-            output.extend(simple_loc_parse(world))
-    else:
-        output = simple_loc_parse(worlds)
-    with open("./dump/" + output_filename + ".json", 'w') as output_file:
-        json.dump(output, output_file, indent='\t')
-
-def dump_strings(input_string: AnyStr | List[AnyStr], output_filename: AnyStr) -> None:
-    if not isinstance(input_string, list):
-        input_string = [input_string]
-    input_string = [val + '\n' for val in input_string]
-    with open("./dump/" + output_filename + ".txt", 'w') as output_file:
-        output_file.writelines(input_string)
+#
+# def dump_simple_items(obj, filename: AnyStr) -> None:
+#     output = list()
+#     if isinstance(output, list):
+#         output = [str(item) for item in obj]
+#     else:
+#         output.append(str(obj))
+#     with open("./dump/" + filename + ".json", 'w') as output_file:
+#         output_file.writelines(output)
+#
+# def dump_simple_world_locations(worlds: List[Any] | Any, output_filename: str) -> None:
+#     output = list()
+#     if isinstance(worlds, list):
+#         for world in worlds:
+#             output.extend(simple_loc_parse(world))
+#     else:
+#         output = simple_loc_parse(worlds)
+#     with open("./dump/" + output_filename + ".json", 'w') as output_file:
+#         json.dump(output, output_file, indent='\t')
+#
+# def dump_strings(input_string: AnyStr | List[AnyStr], output_filename: AnyStr) -> None:
+#     if not isinstance(input_string, list):
+#         input_string = [input_string]
+#     input_string = [val + '\n' for val in input_string]
+#     with open("./dump/" + output_filename + ".txt", 'w') as output_file:
+#         output_file.writelines(input_string)
 
 def simple_loc_parse(world):
     return [location.json_output() for location in world.location_entries]
