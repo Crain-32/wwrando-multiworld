@@ -29,7 +29,7 @@ class Macro:
         )
 
 
-def parse_element(req_type: AnyStr, json_args: List[Any] | Dict[Any, Any]) -> List[Any]:
+def parse_element(req_type: AnyStr, json_args) -> List[Any]:
     if len(json_args) == 0:
         raise RuntimeError("At least one Argument is Required to Parse an Element")
     elif req_type == REQUIREMENT_OR or req_type == REQUIREMENT_AND:

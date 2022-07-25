@@ -389,7 +389,7 @@ chart_macro_to_island = {
 }
 
 
-def parse_macro_requirement_list(macros: Dict[AnyStr, Any], *requirement) -> List[int]:
+def parse_macro_requirement_list(macros, *requirement) -> List[int]:
     output: List[int] = list()
     for req in requirement:
         if req.type == REQUIREMENT_HAS_ITEM:
