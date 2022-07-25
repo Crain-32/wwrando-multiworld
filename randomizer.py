@@ -207,7 +207,7 @@ class Randomizer:
         tweaks.enable_developer_mode(self)
       if self.heap_display:
         tweaks.enable_heap_display(self)
-      if self.options.get("multiworld") != "Disabled":
+      if self.options.get("multiplayer") != "Disabled":
         patcher.apply_patch(self, "multiworld_scripts")
         
       if self.test_room_args is not None:
@@ -216,7 +216,8 @@ class Randomizer:
     
     yield("Creating Worlds...", options_completed)
     self.worlds.clear()
-    for world_id in range(int(self.options.get("world_count"))):
+    world_amount = int(self.options.get("world_count")) if self.options.get("multiplayer") == "Multiworld" else 1
+    for world_id in range(world_amount):
       world = World(Settings(self.options), world_id)
       world.load_world()
       world.determine_chart_mappings(self)
@@ -262,11 +263,11 @@ class Randomizer:
     
     yield("Saving items...", options_completed)
     if self.randomize_items and not self.dry_run:
-      items.write_changed_items(self, self.world_id)
+      items.write_changed_items(self, self.world_id if self.options.get("multiplayer") == "Multiworld" else 0)
       # tweaks.randomize_and_update_hints(self) # We'll implement Hints after we get this table.
     
     if not self.dry_run:
-      self.apply_necessary_post_randomization_tweaks(self.world_id)
+      self.apply_necessary_post_randomization_tweaks(self.world_id if self.options.get("multiplayer") == "Multiplayer" else 0)
     options_completed += 7
     
     yield("Saving randomized ISO...", options_completed)
@@ -284,7 +285,8 @@ class Randomizer:
     
     if self.randomize_items:
       if not self.options.get("do_not_generate_spoiler_log"):
-        generate_spoiler_log(self.worlds, self.randomized_output_folder, f"{self.seed}-W{self.world_id}")
+        world_section: AnyStr = f"-W{self.world_id}" if self.options.get("multiplayer") == "Multiworld" else ""
+        generate_spoiler_log(self.worlds, self.randomized_output_folder, f"{self.seed}{world_section}")
     
     yield("Done", -1)
   

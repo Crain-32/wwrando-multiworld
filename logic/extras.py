@@ -2,6 +2,7 @@ import re
 from collections import OrderedDict
 from dataclasses import asdict
 import json
+from typing import AnyStr, List, Any, Dict, Generator
 
 # Replaces the WorldLoadingError Enum Struct in World.hpp
 
@@ -387,6 +388,26 @@ chart_macro_to_island = {
     "Chart for Island 49": "Five Star Sunken Treasure"
 }
 
+
+def parse_macro_requirement_list(macros: Dict[AnyStr, Any], *requirement) -> List[int]:
+    output: List[int] = list()
+    for req in requirement:
+        if req.type == REQUIREMENT_HAS_ITEM:
+            if isinstance(req.args[0], str):
+                output.append(item_id_dict[req.args[0]])
+            else:
+                output.append(req.args[0])
+        elif req.type == REQUIREMENT_COUNT:
+            if isinstance(req.args[1], str):
+                output.append(item_id_dict[req.args[1]])
+            else:
+                output.append(req.args[1])
+        elif req.type == REQUIREMENT_OR or req.type == REQUIREMENT_AND or req.type == REQUIREMENT_NOT:
+            output += parse_macro_requirement_list(macros, *req.args)
+        elif req.type == REQUIREMENT_MACRO:
+            output += parse_macro_requirement_list(macros, macros[req.args[0]].expression)
+    return output
+
 def handle_lists(obj: list):
     result = []
     for thing in obj:
@@ -401,7 +422,6 @@ def dump_object(obj, filename: str, write_str: bool = False):
         inp = handle_lists(obj)
     elif write_str:
         with open("./dump/" + filename + ".txt", 'w') as output:
-            print(str(obj))
             output.write(str(obj))
         return
     else:
@@ -417,7 +437,16 @@ def capital_case_with_space(original_str: str) -> str:
     else:
         return original_str
 
-def dump_simple_world_locations(worlds, output_filename: str) -> None:
+def dump_simple_items(obj, filename: AnyStr) -> None:
+    output = list()
+    if isinstance(output, list):
+        output = [str(item) for item in obj]
+    else:
+        output.append(str(obj))
+    with open("./dump/" + filename + ".json", 'w') as output_file:
+        output_file.writelines(output)
+
+def dump_simple_world_locations(worlds: List[Any] | Any, output_filename: str) -> None:
     output = list()
     if isinstance(worlds, list):
         for world in worlds:
@@ -426,6 +455,13 @@ def dump_simple_world_locations(worlds, output_filename: str) -> None:
         output = simple_loc_parse(worlds)
     with open("./dump/" + output_filename + ".json", 'w') as output_file:
         json.dump(output, output_file, indent='\t')
+
+def dump_strings(input_string: AnyStr | List[AnyStr], output_filename: AnyStr) -> None:
+    if not isinstance(input_string, list):
+        input_string = [input_string]
+    input_string = [val + '\n' for val in input_string]
+    with open("./dump/" + output_filename + ".txt", 'w') as output_file:
+        output_file.writelines(input_string)
 
 def simple_loc_parse(world):
     return [location.json_output() for location in world.location_entries]

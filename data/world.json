@@ -940,7 +940,7 @@
                 {
                     "Name": "ForsakenFortressHelmarocKingHeartContainer",
                     "OriginalItem": "HeartContainer",
-                    "Category": ["Dungeon"],
+                    "Category": ["Dungeon", "Race Mode"],
                     "Needs": { "type": "macro", "args": ["Can Defeat Helmaroc King"]},
                     "Paths": [
                         "rels/d_a_bdk.rel@5CCE",
@@ -6193,7 +6193,7 @@
                 {
                     "Name": "DragonRoostCavernGohmaHeartContainer",
                     "OriginalItem": "HeartContainer",
-                    "Category": ["Dungeon"],
+                    "Category": ["Dungeon", "Race Mode"],
                     "Needs": { "type": "has_item", "args": ["GrapplingHook"]},
                     "Paths": [
                         "rels/d_a_btd.rel@36FE",
@@ -6761,7 +6761,7 @@
                 {
                     "Name": "ForbiddenWoodsKalleDemosHeartContainer",
                     "OriginalItem": "HeartContainer",
-                    "Category": ["Dungeon"],
+                    "Category": ["Dungeon", "Race Mode"],
                     "Needs": { "type": "macro", "args": ["Can Defeat Kalle Demos"]},
                     "Paths": [
                         "rels/d_a_bmd.rel@2B2E",
@@ -7293,7 +7293,7 @@
                 {
                     "Name": "TOTGGohdanHeartContainer",
                     "OriginalItem": "HeartContainer",
-                    "Category": ["Dungeon"],
+                    "Category": ["Dungeon", "Race Mode"],
                     "Needs": { "type": "macro", "args": ["Can Defeat Gohdan"]},
                     "Paths": [
                         "rels/d_a_bst.rel@9D43",
@@ -7926,7 +7926,7 @@
                 {
                     "Name": "EarthTempleJalhallaHeartContainer",
                     "OriginalItem": "HeartContainer",
-                    "Category": ["Dungeon"],
+                    "Category": ["Dungeon", "Race Mode"],
                     "Needs": { "type": "macro", "args": ["Can Defeat Jalhalla"]},
                     "Paths": [
                         "rels/d_a_bpw.rel@877E",
@@ -8623,7 +8623,7 @@
                 {
                     "Name": "WindTempleMolgeraHeartContainer",
                     "OriginalItem": "HeartContainer",
-                    "Category": ["Dungeon"],
+                    "Category": ["Dungeon", "Race Mode"],
                     "Needs": { "type": "macro", "args": ["Can Defeat Molgera"]},
                     "Paths": [
                         "rels/d_a_bwd.rel@6D83",

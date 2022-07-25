@@ -29,7 +29,6 @@ item_type_to_name = {
 class GameItem:
 
     game_item_id: int
-    delayed_item_id: int = 0xFF
     major_item: bool = False
     chart_for_sunken_treasure: bool = False
     junk_item: bool = False
@@ -38,7 +37,7 @@ class GameItem:
 
     @staticmethod
     def random_junk(world_id: int):
-        item_val =  random.choice(junk_item_ids)
+        item_val = random.choice(junk_item_ids)
         return GameItem(game_item_id=item_val, world_id=world_id, junk_item=True)
 
     @staticmethod
@@ -76,10 +75,9 @@ class GameItem:
         return self
 
     def __str__(self):
-        return f"GameItem(game_item_id={item_id_to_name_dict[self.game_item_id]}, major_true={self.major_item}, " \
+        return f"GameItem(game_item_id={item_id_to_name_dict[self.game_item_id]}, major={self.major_item}, " \
                f"chart_for_sunken_treasure={self.chart_for_sunken_treasure}, junk_item={self.junk_item}, " \
                f"world_id={self.world_id}, item_id={item_type_to_name[self.item_type]})"
-
 
 def junk_item_check(item: GameItem) -> GameItem:
     item.junk_item = item.game_item_id in junk_item_ids
@@ -93,6 +91,9 @@ def is_sword(item: GameItem) -> bool:
 
 def is_bow(item: GameItem) -> bool:
     return item.game_item_id in [0x27, 0x35, 0x36]
+
+def is_chat(item: GameItem) -> bool:
+    return is_treasure_chart(item) or is_triforce_chart(item)
 
 def is_treasure_chart(item: GameItem) -> bool:
     return item.game_item_id in treasure_chart_ids

@@ -65,7 +65,7 @@ class Settings:
                         range(starting_shards))
                 )
             )
-        self.progressive_categories["Multiworld"] = (options.get("multiplayer") == "Multiworld")
+        self.multiworld = options.get("multiplayer") == "Multiworld"
         self.sword_mode = options.get("sword_mode")
 
     def spoiler_representation(self, world_id: int) -> str:

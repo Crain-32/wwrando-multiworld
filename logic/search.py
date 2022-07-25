@@ -170,19 +170,3 @@ def generate_playthrough(worlds: List[World]):
     search(SEARCH_GENERATE_PLAYTHROUGH, worlds, [])
     worlds = pare_down_playthrough(worlds)
     generate_spoiler_log(worlds)
-
-
-def locations_reachable(worlds: List[World], items: List[GameItem],
-                        locations_to_check: List[Location], world_to_search: int) -> bool:
-    accessible_locations = search(SEARCH_ACCESSIBLE_LOCATIONS, worlds, items, world_to_search)
-
-    if len(locations_to_check) < len(accessible_locations):
-        return False
-
-    return all(
-            map(
-                (lambda loc: loc in accessible_locations),
-                locations_to_check
-                )
-            )
-

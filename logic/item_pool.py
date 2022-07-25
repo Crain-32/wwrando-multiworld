@@ -125,6 +125,8 @@ dungeons = {
     0x85  # Compass
   ]
 }
+dungeon_key_item_values = set(itertools.chain(*dungeons.values()))
+
 swords = [
   0x38,
   0x38,
@@ -212,7 +214,7 @@ def generate_game_item_pool(settings: Settings, starting_items: list[int]) -> li
     item_pool += [0x08] * (3 - settings.starting_hcs)
     item_pool += [0x07] * (44 - settings.starting_pohs)
     item_pool.extend(charts)
-    remove_starting_items(item_pool, starting_items)
+    item_pool = remove_starting_items(item_pool, starting_items)
     return item_pool
 
 def generate_starting_items(settings: Settings) -> list[int]:

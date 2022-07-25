@@ -1,8 +1,11 @@
 from dataclasses import dataclass
+from typing import AnyStr, List, Dict, Generator, Iterable
 
-from logic.extras import item_id_dict, item_id_to_name_dict
+from logic.extras import *
 from classes.gameitem import GameItem
-from classes.requirement import Requirement
+from classes.requirement import Requirement, Macro
+
+
 
 @dataclass
 class Location:
@@ -65,5 +68,9 @@ class Location:
             "ItemWorldId": self.current_item.world_id
         }
 
+    def get_required_items(self, reference_macros: Dict[AnyStr, Macro]) -> List[int]:
+        return list(parse_macro_requirement_list(reference_macros, *self.requirement))
+
     def __eq__(self, other):
         return self.name == other.name and self.world_id == other.world_id
+

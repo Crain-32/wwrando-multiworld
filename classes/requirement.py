@@ -5,9 +5,8 @@ from logic.extras import *
 
 @dataclass
 class Requirement:
-
-    type: str
-    args: list
+    type: AnyStr
+    args: List
 
     @staticmethod
     def from_dict(dict_obj):
@@ -17,9 +16,10 @@ class Requirement:
         else:
             return Requirement(type=req_type, args=parse_element(req_type, dict_obj["args"]))
 
+
 @dataclass
 class Macro:
-    name: str
+    name: AnyStr
     expression: Requirement
 
     @staticmethod
@@ -29,7 +29,7 @@ class Macro:
         )
 
 
-def parse_element(req_type: str, json_args: list[object]) -> list[object]:
+def parse_element(req_type: AnyStr, json_args: List[Any] | Dict[Any, Any]) -> List[Any]:
     if len(json_args) == 0:
         raise RuntimeError("At least one Argument is Required to Parse an Element")
     elif req_type == REQUIREMENT_OR or req_type == REQUIREMENT_AND:
@@ -40,7 +40,7 @@ def parse_element(req_type: str, json_args: list[object]) -> list[object]:
         return [item_id_dict[json_args[0]]]
     elif req_type == REQUIREMENT_COUNT:
         if len(json_args) != 2:
-           raise RuntimeError("At least two Arguments are Required for COUNT")
+            raise RuntimeError("At least two Arguments are Required for COUNT")
         return [int(json_args[0]), json_args[1]]
     elif req_type == REQUIREMENT_CAN_ACCESS:
         return [json_args[0]]

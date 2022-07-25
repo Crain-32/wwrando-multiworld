@@ -1,7 +1,10 @@
 from dataclasses import dataclass
+from typing import List, Dict, AnyStr
+from logic.extras import parse_macro_requirement_list
 
 from classes.location import Location
-from classes.requirement import Requirement
+from classes.requirement import Requirement, Macro
+
 
 
 @dataclass
@@ -46,3 +49,15 @@ class Area:
 
     def get_locations(self) -> list[Location]:
         return self.locations
+
+    def get_required_item_id(self, referenced_macros: Dict[AnyStr, Macro], connected_areas: List[AnyStr]) -> List[int]:
+        val = set()
+        target_locations = list(filter(Location.is_logical_location, self.locations))
+        for loc in target_locations:
+            for item_id in parse_macro_requirement_list(referenced_macros, loc.requirement):
+                val.add(item_id)
+        for connected_name, connected_req in self.exits.items():
+            if connected_name in connected_areas:
+                for item_id in parse_macro_requirement_list(referenced_macros, connected_req.requirement):
+                    val.add(item_id)
+        return list(val)
