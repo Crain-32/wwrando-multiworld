@@ -6,6 +6,10 @@ custom_write_item_world_id:
   mflr r0
   stw r0, 0x14 (sp)
 
+  lis r5, item_id@ha
+  addi r5, r5, item_id@l
+  rlwinm r5, r5, 0, 0, 31 ; Otherwise we'll scan a non-zero byte.
+
   lis r5, world_id@ha
   addi r5, r5, world_id@l
   lha r0, 0x1DC(r30)
@@ -39,28 +43,18 @@ adjust_salvage_chests:
   addi sp, sp, 0x10
   blr
 
-.global store_salvage_world_id
+.global store_salvage_world_id ; 0x80480338? checkOrder Entry?
 store_salvage_world_id:
   stwu sp, -0x10 (sp)
   mflr r0
   stw r0, 0x14 (sp)
 
-  or r31, r4, r4
-  mulli r6, r4, 0x38
-  add r5, r3, r6
+
 
   lis r6, world_id@ha
   addi r6, r6, world_id@l
   lbz r0, 0x36 (r5)
   stw r0, 0x0 (r6)
-
-  lis r6, item_id@ha
-  addi r6, r6, item_id@l
-  lbz r0, 0x34 (r5)
-  stw r0, 0x00 (r6)
-
-  li r0, 0x0
-  stb r0, 0x36 (r5)
 
   lwz r0, 0x14 (sp)
   mtlr r0

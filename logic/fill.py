@@ -107,6 +107,8 @@ def handle_dungeon_items(worlds: list[World], random_state: Random) -> list[Worl
         for dungeon_name in DUNGEON_NAMES:
             if not world.world_settings.keylunacy:
                 dungeon_locations = [location for location in world.get_specific_dungeon_locations(dungeon_name)]
+                # TODO Incorrect Check here, we need to check for if Tingle Statues are active, not Dungeon Items.
+                # Otherwise, we fail to find any dungeon items if Dungeons aren't enabled.
                 logical_locations = list(filter((lambda loc: loc.current_item.game_item_id == item_id_dict["Nothing"]),
                                                 world.determine_progression_locations_from_list(dungeon_locations)))
 
@@ -159,7 +161,7 @@ def assumed_fill(worlds: List[World], logical_items: List[GameItem], logical_loc
 
             accessible_locations = get_accessible_locations(worlds, items_not_placed, logical_locations, world_id)
             # The above is likely linked to the current issues because it finds the accessible locations and
-            # updates them. However testing hasn't proven this.
+            # updates them. However, testing hasn't proven this.
 
             if len(accessible_locations) == 0:
                 print(f"No Accessible Locations to place {next_item}. Remaining Attempts this cycle: {retries}")
@@ -275,7 +277,7 @@ def fill_the_rest(locations: list[Location], items: list[GameItem], random_state
 
     for location in locations:
         if location.current_item is None:
-            location.current_item = GameItem.random_junk(location.world_id)
+            location.current_item = GameItem.random_junk(location.world_id, random_state)
 
 
 """

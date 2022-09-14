@@ -36,8 +36,8 @@ class GameItem:
     item_type: int = 9
 
     @staticmethod
-    def random_junk(world_id: int):
-        item_val = random.choice(junk_item_ids)
+    def random_junk(world_id: int, random_state):
+        item_val = random_state.choice(junk_item_ids)
         return GameItem(game_item_id=item_val, world_id=world_id, junk_item=True)
 
     @staticmethod
