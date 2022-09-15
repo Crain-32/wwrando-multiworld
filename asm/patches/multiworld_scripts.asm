@@ -8,7 +8,8 @@ custom_write_item_world_id:
 
   lis r5, item_id@ha
   addi r5, r5, item_id@l
-  rlwinm r5, r5, 0, 0, 31 ; Otherwise we'll scan a non-zero byte.
+  andi. r0, r0, 0x0000; Otherwise we'll scan a non-zero byte.
+  stw r0, 0x0(r5)
 
   lis r5, world_id@ha
   addi r5, r5, world_id@l
@@ -48,7 +49,6 @@ store_salvage_world_id:
   stwu sp, -0x10 (sp)
   mflr r0
   stw r0, 0x14 (sp)
-
 
 
   lis r6, world_id@ha
