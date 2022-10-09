@@ -110,10 +110,10 @@ class Randomizer:
     
     self.arcs_by_path = {}
     self.jpcs_by_path = {}
-    self.rels_by_path = {}
+    self.rels_by_path: Dict[AnyStr, REL] = {}
     self.symbol_maps_by_path = {}
     self.raw_files_by_path = {}
-    self.used_actor_ids = list(range(0x1F6))
+    self.used_actor_ids: List[int] = list(range(0x1F6))
     
     self.read_text_file_lists()
 
@@ -215,14 +215,15 @@ class Randomizer:
     options_completed += 1
     
     yield("Creating Worlds...", options_completed)
-    self.worlds.clear()
+    self.worlds = list()
+    self.reset_rng()
     world_amount = int(self.options.get("world_count")) if self.options.get("multiplayer") == "Multiworld" else 1
     for world_id in range(world_amount):
       world = World(Settings(self.options), world_id)
       world.load_world()
       world.determine_chart_mappings(self)
       world.determine_chart_mappings(self)
-      world.determine_progression_locations()
+      world.set_progression_locations()
       world.determine_race_mode_dungeons(self)
       world.set_item_pools()
       self.worlds.append(world)
@@ -500,7 +501,7 @@ class Randomizer:
       self.jpcs_by_path[jpc_path] = jpc
       return jpc
   
-  def get_rel(self, rel_path) -> REL:
+  def get_rel(self, rel_path: AnyStr) -> REL:
     rel_path = rel_path.replace("\\", "/")
     
     if rel_path in self.rels_by_path:

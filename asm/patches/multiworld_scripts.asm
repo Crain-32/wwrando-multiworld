@@ -45,22 +45,23 @@ adjust_salvage_chests:
   blr
 
 .global store_salvage_world_id ; 0x80480338? checkOrder Entry?
-store_salvage_world_id:
-  stwu sp, -0x10 (sp)
-  mflr r0
-  stw r0, 0x14 (sp)
+store_salvage_world_id:        ; R3 has to have the Item Id.
+  mulli r0, r4, 0x38           ; R4 is set after return
+  add r3, r3, r0               ; R5 see above
 
+  lis r5, item_id@ha
+  addi r5, r5, item_id@l
+  andi. r4, r4, 0x0000; Otherwise we'll scan a non-zero byte.
+  stw r4, 0x0(r5)
 
-  lis r6, world_id@ha
-  addi r6, r6, world_id@l
-  lbz r0, 0x36 (r5)
-  stw r0, 0x0 (r6)
+  lis r5, world_id@ha
+  addi r5, r5, world_id@l
+  lbz r4, 0x36 (r3)
+  stw r4, 0x0 (r5)
 
-  lwz r0, 0x14 (sp)
-  mtlr r0
-  addi sp, sp, 0x10
+  lbz r3, 0x34 (r3)
+
   blr
-
 
 .global get_item_detour
 get_item_detour:
@@ -122,8 +123,10 @@ item_id:
 .open "sys/main.dol" ; Store World ID for Salvage Chests
 .org 0x800CCAA4
   bl adjust_salvage_chests
+.close
 
-.org 0x800CCBDC
+.open "files/rels/d_a_salvage.rel"
+.org 0xb34 ; in checkOrder__11daSalvage_cFv
   bl store_salvage_world_id
 .close
 

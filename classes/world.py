@@ -1,6 +1,7 @@
 import itertools
 import os
 from dataclasses import dataclass, field
+from random import random
 from typing import Set
 
 from classes.area import Area
@@ -17,13 +18,13 @@ from wwrando_paths import DATA_PATH
 class World:
     world_settings: Settings
     world_id: int
-    starting_items: list[GameItem] = field(default_factory=list)
-    item_pool: list[GameItem] = field(default_factory=list)
-    area_entries: dict[str, Area] = field(default_factory=dict)
-    location_entries: list[Location] = field(default_factory=list)
-    macros: dict[str, Macro] = field(default_factory=dict)
-    play_through_spheres: list[list[Location]] = field(default_factory=list)
-    race_mode_dungeons: list[str] = field(default_factory=list)
+    starting_items: List[GameItem] = field(default_factory=list)
+    item_pool: List[GameItem] = field(default_factory=list)
+    area_entries: Dict[AnyStr, Area] = field(default_factory=dict)
+    location_entries: List[Location] = field(default_factory=list)
+    macros: Dict[AnyStr, Macro] = field(default_factory=dict)
+    play_through_spheres: List[List[Location]] = field(default_factory=list)
+    race_mode_dungeons: List[AnyStr] = field(default_factory=list)
 
     def __init__(self, settings: Settings, world_id: int):
         self.world_settings = settings
@@ -63,7 +64,7 @@ class World:
             for loc in self.location_entries:
                 loc.world_id = different_id
 
-    def determine_chart_mappings(self, random_state):
+    def determine_chart_mappings(self, random_state: random):
         chart_mappings = [
             "TreasureChart25",
             "TreasureChart7",
@@ -121,23 +122,20 @@ class World:
         for sector, chart in enumerate(chart_mappings):
             self._replace_macro_item(f"Chart for Island {sector + 1}", Requirement(REQUIREMENT_HAS_ITEM, [chart]))
 
-    def determine_progression_locations(self):
+    def set_progression_locations(self):
         self.location_entries = self.determine_progression_locations_from_list(self.location_entries)
 
-    def determine_progression_locations_from_list(self, location_list: list[Location]) -> list[Location]:
-        return list(
-            map(
-                (lambda logical: logical.make_logical()),
-                filter(
-                    (lambda progressive:
-                     self.location_category_cache(progressive.category_set)
-                     ),
-                    location_list
-                )
-            )
-        )
+    def determine_progression_locations_from_list(self, location_list: List[Location]) -> List[Location]:
+        processedLocations: List[Location] = list()
+        for loc in location_list:
+            if self.location_category_cache(loc.category_set):
+                loc.make_logical()
+            processedLocations.append(loc)
+        return processedLocations
 
-    def determine_race_mode_dungeons(self, random_state):
+
+
+    def determine_race_mode_dungeons(self, random_state: random):
         if self.world_settings.race_mode:
             shuffled_dungeons = DUNGEON_NAMES.copy()
             random_state.rng.shuffle(shuffled_dungeons)
@@ -148,7 +146,7 @@ class World:
                 else:
                     self._set_dungeon_non_progressive(dungeon_name)
 
-    def load_world(self, world_file="world.json", macro_file="Macros.json"):
+    def load_world(self, world_file:AnyStr="world.json", macro_file:AnyStr="Macros.json"):
         self.area_entries = World.load_parse_world(os.path.join(DATA_PATH, world_file), self.world_id)
         self.macros = {macro.name: macro for macro in World.load_parse_macros(os.path.join(DATA_PATH, macro_file))}
         self.location_entries = list(
@@ -165,7 +163,7 @@ class World:
             )
         )
 
-    def dump_world_graph(self, filename: str):
+    def dump_world_graph(self, filename: AnyStr):
         with open("./dump/" + filename + ".dot", 'w') as world_dump:
             world_dump.write("digraph {\n\tcenter=true;\n")
             for area in self.area_entries.values():
@@ -181,14 +179,14 @@ class World:
             world_dump.write("}")
 
     @staticmethod
-    def chart_leads_to_sunken_treasure(location: Location, item_prefix) -> bool:
+    def chart_leads_to_sunken_treasure(location: Location) -> bool:
         if LOCATION_CATEGORY_SUNKEN_TREASURE not in location.category_set:
             print(f"Non-sunken Location {location} passed into Sunken Treasure Check")
             return False
         # Not entirely certain what is happening here
         return True
 
-    def set_location(self, loc_name: str, item_val: int, world_id: int):
+    def set_location(self, loc_name: AnyStr, item_val: int, world_id: int):
         loc_list = list(filter((lambda loc_l: loc_name in loc_l.name), self.location_entries))
         if len(loc_list) == 0 or len(loc_list) > 1:
             raise RuntimeError(f"Could not find Location with name {loc_name}, found {loc_list} instead")
@@ -205,7 +203,7 @@ class World:
             )
         return dungeon_locations
 
-    def get_specific_dungeon_locations(self, dungeon_name: str) -> list[Location]:
+    def get_specific_dungeon_locations(self, dungeon_name: AnyStr) -> List[Location]:
         if dungeon_name == "TowerOfTheGods":
             dungeon_name = "TOTG"
         return list(
@@ -220,7 +218,7 @@ class World:
             boss_loc += list(filter((lambda loc: dungeon_name in loc.name and "HeartContainer" in loc.name), self.location_entries))
         return boss_loc
 
-    def get_dungeon_keys(self, dungeon_name: str) -> list[GameItem]:
+    def get_dungeon_keys(self, dungeon_name: AnyStr) -> List[GameItem]:
         if dungeon_name == "ForsakenFortress":
             return []
 
@@ -235,7 +233,7 @@ class World:
             self.item_pool.remove(key)
         return dungeon_keys
 
-    def get_dungeon_extras(self, dungeon_name: str) -> list[GameItem]:
+    def get_dungeon_extras(self, dungeon_name: AnyStr) -> List[GameItem]:
         keys_value = dungeons[dungeon_name + "Extras"]
         dungeon_extras = list(
             filter(
@@ -248,7 +246,7 @@ class World:
         return dungeon_extras
 
     @staticmethod
-    def load_parse_macros(macro_location: str) -> list[Macro]:
+    def load_parse_macros(macro_location: AnyStr) -> List[Macro]:
         with open(macro_location) as macros_loc:
             macro_file = json.load(macros_loc)
             macro_list = list(map(Macro.from_dict, macro_file["Macros"]))
@@ -259,13 +257,13 @@ class World:
                 return macro_list
 
     @staticmethod
-    def load_parse_world(world_location: str, world_id: int) -> dict[str, Area]:
+    def load_parse_world(world_location: AnyStr, world_id: int) -> Dict[AnyStr, Area]:
         with open(world_location) as world_loc:
             area_file = json.load(world_loc)
             area_list = list(map((lambda create: Area.with_world_id(create, world_id)), area_file["Areas"]))
             return {area.name: area for area in area_list}
 
-    def _set_dungeon_non_progressive(self, dungeon_name: str) -> None:
+    def _set_dungeon_non_progressive(self, dungeon_name: AnyStr) -> None:
         location_entries = list()
         for location in self.location_entries:
             if dungeon_name in location.name:
@@ -273,19 +271,16 @@ class World:
             location_entries.append(location)
         self.location_entries = location_entries
 
-    def _location_category_list(self) -> list[str]:
+    def _location_category_list(self) -> List[AnyStr]:
         return [key for key, val in self.world_settings.progressive_categories.items()
                 if val == True] + ["DefeatGanondorf", "Multiworld", "Race Mode"]
 
 
-    def location_category_cache(self, categories: set[str]) -> bool:
+    def location_category_cache(self, categories: Set[AnyStr]) -> bool:
         basic_cats: bool = all([location_cat in self._location_category_list() for location_cat in categories])
-        if basic_cats and self.world_settings.multiworld:
-            basic_cats = ("Multiworld" in categories or
-                          "Race Mode" in categories if self.world_settings.race_mode else False)
         return basic_cats
 
-    def _replace_macro_item(self, macro_name: str, new_requirement: Requirement):
+    def _replace_macro_item(self, macro_name: AnyStr, new_requirement: Requirement):
         macro = self.macros[macro_name]
         macro.expression = new_requirement
         self.macros[macro_name] = macro
@@ -313,8 +308,8 @@ class World:
                 if new_area_name not in logical_area_names:
                     logical_area_names.add(new_area_name)
 
-        logical_area_names = list(logical_area_names)
-        logical_area_names = sorted(logical_area_names)
+        logical_area_names = set(logical_area_names)
+        logical_area_names = set(sorted(logical_area_names))
         for target_area in logical_area_names:
             item_id_vals += self.area_entries[target_area].get_required_item_id(self.macros, list(logical_area_names))
 

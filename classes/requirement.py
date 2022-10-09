@@ -1,3 +1,4 @@
+from __future__ import annotations
 from dataclasses import dataclass
 
 from logic.extras import *
@@ -8,13 +9,13 @@ class Requirement:
     type: AnyStr
     args: List
 
-    @staticmethod
-    def from_dict(dict_obj):
+    @classmethod
+    def from_dict(cls, dict_obj) -> Requirement:
         req_type = str(dict_obj["type"]).upper()
         if req_type not in REQUIREMENT_TYPES:
             raise RuntimeError(f"Invalid Type {req_type} passed in.")
         else:
-            return Requirement(type=req_type, args=parse_element(req_type, dict_obj["args"]))
+            return cls(type=req_type, args=parse_element(req_type, dict_obj["args"]))
 
 
 @dataclass
@@ -22,9 +23,9 @@ class Macro:
     name: AnyStr
     expression: Requirement
 
-    @staticmethod
-    def from_dict(dict_obj):
-        return Macro(
+    @classmethod
+    def from_dict(cls, dict_obj) -> Macro:
+        return cls(
             name=dict_obj["Name"], expression=Requirement.from_dict(dict_obj["Expression"])
         )
 

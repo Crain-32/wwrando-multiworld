@@ -1,10 +1,10 @@
+from __future__ import annotations
 from dataclasses import dataclass
-from typing import List, Dict, AnyStr
-from logic.extras import parse_macro_requirement_list
+from typing import List, Dict, AnyStr, Any
 
 from classes.location import Location
 from classes.requirement import Requirement, Macro
-
+from logic.extras import parse_macro_requirement_list
 
 
 @dataclass
@@ -13,33 +13,33 @@ class Exit:
     requirement: Requirement
     world_id: int = -1
 
-    @staticmethod
-    def from_dict(dict_obj: dict[str, object]):
-        return Exit(name=dict_obj["ConnectedArea"], requirement=Requirement.from_dict(dict_obj["Needs"]))
+    @classmethod
+    def from_dict(cls, dict_obj: dict[AnyStr, Any]) -> Exit:
+        return cls(name=dict_obj["ConnectedArea"], requirement=Requirement.from_dict(dict_obj["Needs"]))
 
 
 @dataclass
 class Area:
-    name: str
+    name: AnyStr
     locations: list[Location]
-    exits: dict[str, Exit]
+    exits: Dict[AnyStr, Exit]
     is_accessible: bool = False
     world_id: int = -1
 
     @staticmethod
-    def with_world_id(dict_obj: dict[str, object], world_id: int):
+    def with_world_id(dict_obj: Dict[AnyStr, Any], world_id: int) -> Area:
         area = Area.from_dict(dict_obj)
         return area.set_world_id(world_id)
 
-    @staticmethod
-    def from_dict(dict_obj: dict[str, object]):
-        return Area(
+    @classmethod
+    def from_dict(cls, dict_obj: Dict[AnyStr, Any]) -> Area:
+        return cls(
             name=dict_obj["Name"],
             locations=list(map((lambda loc: Location.from_dict(loc, dict_obj["Name"])), dict_obj["Locations"])),
             exits={exits.name: exits for exits in list(map(Exit.from_dict, dict_obj["Exits"]))}
         )
 
-    def set_world_id(self, world_id: int):
+    def set_world_id(self, world_id: int) -> Area:
         self.world_id = world_id
         for name, exits in self.exits.items():
             exits.world_id = world_id

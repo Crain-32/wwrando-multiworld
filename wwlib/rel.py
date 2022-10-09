@@ -1,3 +1,4 @@
+from typing import Callable, Any, Union
 
 from fs_helpers import *
 from wwlib.yaz0 import Yaz0
@@ -8,6 +9,11 @@ from enum import Enum
 
 class REL:
   def __init__(self):
+    self.imp_table_length: int | None = None
+    self.relocation_table_offset: int | None = None
+    self.section_info_table_offset: int | None = None
+    self.num_sections: int | None = None
+    self.imp_table_offset: int | None = None
     self.data = BytesIO()
     
     self.id = None
@@ -141,7 +147,7 @@ class REL:
     
     return (section_index, relative_offset)
   
-  def convert_rel_offset_to_section_data_and_relative_offset(self, offset):
+  def convert_rel_offset_to_section_data_and_relative_offset(self, offset) -> [Any, int]:
     data = None
     relative_offset = None
     
@@ -154,7 +160,7 @@ class REL:
         relative_offset = offset - section.offset
         break
     
-    return (data, relative_offset)
+    return data, relative_offset
   
   def read_data(self, read_callback, offset, *args):
     # This function allows reading from a REL using the offset from the start of the REL file, instead of needing to know the section index and offset within that section.
@@ -166,7 +172,7 @@ class REL:
     
     return read_callback(data, relative_offset, *args)
   
-  def write_data(self, write_callback, offset, *args, delete_relocations=False):
+  def write_data(self, write_callback: Callable[[Any, int, Union[int, float]], None], offset: int, *args, delete_relocations=False):
     # This function allows writing to a REL using the offset from the start of the REL file, instead of needing to know the section index and offset within that section.
     
     data, relative_offset = self.convert_rel_offset_to_section_data_and_relative_offset(offset)

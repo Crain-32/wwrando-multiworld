@@ -1,3 +1,4 @@
+from typing import AnyStr
 
 from fs_helpers import *
 
@@ -24,14 +25,14 @@ class DZx: # DZR or DZS, same format
         entries += chunk.entries
     return entries
   
-  def entries_by_type_and_layer(self, chunk_type, layer):
+  def entries_by_type_and_layer(self, chunk_type: AnyStr, layer: int):
     entries = []
     for chunk in self.chunks:
       if chunk_type == chunk.chunk_type and layer == chunk.layer:
         entries += chunk.entries
     return entries
   
-  def add_entity(self, chunk_type, layer=None):
+  def add_entity(self, chunk_type: AnyStr, layer: int = None):
     chunk_to_add_entity_to = None
     for chunk in self.chunks:
       if chunk_type == chunk.chunk_type and layer == chunk.layer:
@@ -49,7 +50,7 @@ class DZx: # DZR or DZS, same format
     
     return entity
   
-  def remove_entity(self, entity, chunk_type, layer=None):
+  def remove_entity(self, entity, chunk_type: AnyStr, layer:int=None):
     assert hasattr(entity, "name")
     
     # Instead of actually removing the entity from the list, simply set its name to the empty string.
@@ -150,7 +151,7 @@ class Chunk:
     self.offset = offset
     data = self.file_entry.data
     
-    self.chunk_type = read_str(data, self.offset, 4)
+    self.chunk_type: AnyStr = read_str(data, self.offset, 4)
     self.num_entries = read_u32(data, self.offset+4)
     self.first_entry_offset = read_u32(data, self.offset+8)
     
@@ -261,7 +262,7 @@ class ChunkEntry:
         lowest_set_bit_index = bit_index
         break
     if lowest_set_bit_index is None:
-      raise Exception("Invalid mask: %08X" % mask)
+      raise Exception("Invalid mask: %08X" % integer)
     return lowest_set_bit_index
   
   @property

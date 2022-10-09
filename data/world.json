@@ -1606,8 +1606,7 @@
                     "OriginalItem": "EmptyBottle",
                     "Category": ["ShortSideQuest"],
                     "Needs": { "type": "macro", "args": ["Rescued Aryll"]},
-                    "Paths": "content/Common/Pack/first_szs_permanent.pack@SARC@sea_Stage.szs@YAZ0",
-                    "Type": ["sea/Stage.arc/Event084:get_empty_btl/Actor002/Action001"]
+                    "Paths": ["sea/Stage.arc/Event084:get_empty_btl/Actor002/Action001"]
                 },
                 {
                     "Name": "WindfallPompieVeraPictoSecretMeeting",

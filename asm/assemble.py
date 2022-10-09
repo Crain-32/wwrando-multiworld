@@ -114,28 +114,28 @@ def compile_c_to_asm(c_src_path):
   return compiled_asm
 
 def get_code_and_relocations_from_elf(bin_name):
-  elf = ELF()
-  elf.read_from_file(bin_name)
+  elf_instance = ELF()
+  elf_instance.read_from_file(bin_name)
   
   relocations_in_elf = []
   
-  for elf_section in elf.sections:
+  for section in elf_instance.sections:
     # TODO: Maybe support multiple sections, not just .text, such as .data?
     found_text_section = False
-    if elf_section.name == ".text":
+    if section.name == ".text":
       assert not found_text_section
       found_text_section = True
       # Get the code and overwrite the ELF file with just the raw binary code.
       with open(bin_name, "wb") as f:
-        f.write(read_all_bytes(elf_section.data))
-    elif elf_section.type == ELFSectionType.SHT_RELA:
+        f.write(read_all_bytes(section.data))
+    elif section.type == ELFSectionType.SHT_RELA:
       # Get the relocations.
-      assert elf_section.name.startswith(".rela")
-      relocated_section_name = elf_section.name[len(".rela"):]
+      assert section.name.startswith(".rela")
+      relocated_section_name = section.name[len(".rela"):]
       assert relocated_section_name == ".text"
       
-      for elf_relocation in elf.relocations[elf_section.name]:
-        elf_symbol = elf.symbols[".symtab"][elf_relocation.symbol_index]
+      for elf_relocation in elf_instance.relocations[section.name]:
+        elf_symbol = elf_instance.symbols[".symtab"][elf_relocation.symbol_index]
         is_local_relocation = try_apply_local_relocation(bin_name, elf_relocation, elf_symbol)
         
         if not is_local_relocation:

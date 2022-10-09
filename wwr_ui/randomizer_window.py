@@ -1,3 +1,5 @@
+from typing import AnyStr
+
 from PySide6.QtGui import *
 from PySide6.QtCore import *
 from PySide6.QtWidgets import *
@@ -658,7 +660,7 @@ class WWRandomizerWindow(QMainWindow):
     
     self.set_option_description(desc)
   
-  def get_option_value(self, option_name):
+  def get_option_value(self, option_name: AnyStr):
     widget = getattr(self.ui, option_name)
     if isinstance(widget, QCheckBox) or isinstance(widget, QRadioButton):
       return widget.isChecked()
@@ -669,9 +671,9 @@ class WWRandomizerWindow(QMainWindow):
     elif isinstance(widget, QLineEdit):
       return widget.text()
     elif isinstance(widget, QListView):
-      if widget.model() == None:
+      if widget.model() is None:
         return []
-      model = widget.model();
+      model = widget.model()
       if isinstance(model, ModelFilterOut):
         model = model.sourceModel()
       model.sort(0)

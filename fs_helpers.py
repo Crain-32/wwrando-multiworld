@@ -1,6 +1,7 @@
 
 import struct
 from io import BytesIO
+from typing import AnyStr
 
 PADDING_BYTES = b"This is padding data to alignme"
 
@@ -40,7 +41,7 @@ def write_and_pack_bytes(data, offset, new_values, format_string):
   data.write(packed_data)
 
 
-def read_str(data, offset, length):
+def read_str(data, offset: int, length: int) -> AnyStr:
   data_length = data.seek(0, 2)
   if offset+length > data_length:
     raise InvalidOffsetError("Offset 0x%X, length 0x%X is past the end of the data (length 0x%X)." % (offset, length, data_length))
@@ -49,7 +50,7 @@ def read_str(data, offset, length):
   string = string.rstrip("\0") # Remove trailing null bytes
   return string
 
-def try_read_str(data, offset, length):
+def try_read_str(data, offset, length) -> AnyStr | None:
   try:
     return read_str(data, offset, length)
   except UnicodeDecodeError:
@@ -57,7 +58,7 @@ def try_read_str(data, offset, length):
   except InvalidOffsetError:
     return None
 
-def read_str_until_null_character(data, offset):
+def read_str_until_null_character(data, offset: int) -> AnyStr:
   data_length = data.seek(0, 2)
   if offset > data_length:
     raise InvalidOffsetError("Offset 0x%X is past the end of the data (length 0x%X)." % (offset, data_length))
@@ -74,9 +75,9 @@ def read_str_until_null_character(data, offset):
     temp_offset += 1
   
   data.seek(offset)
-  str = data.read(str_length).decode("shift_jis")
+  data_string: AnyStr = data.read(str_length).decode("shift_jis")
   
-  return str
+  return data_string
 
 def write_str(data, offset, new_string, max_length):
   # Writes a fixed-length string.
@@ -115,19 +116,19 @@ def write_str_with_null_byte(data, offset, new_string):
   write_str(data, offset, new_string, str_len+1)
 
 
-def read_u8(data, offset):
+def read_u8(data, offset) -> int:
   data.seek(offset)
   return struct.unpack(">B", data.read(1))[0]
 
-def read_u16(data, offset):
+def read_u16(data, offset) -> int:
   data.seek(offset)
   return struct.unpack(">H", data.read(2))[0]
 
-def read_u32(data, offset):
+def read_u32(data, offset: int) -> int:
   data.seek(offset)
   return struct.unpack(">I", data.read(4))[0]
 
-def read_float(data, offset):
+def read_float(data, offset) -> float:
   data.seek(offset)
   return struct.unpack(">f", data.read(4))[0]
 
@@ -145,7 +146,7 @@ def read_s32(data, offset):
   return struct.unpack(">i", data.read(4))[0]
 
 
-def write_u8(data, offset, new_value):
+def write_u8(data, offset: int, new_value: int):
   new_value = struct.pack(">B", new_value)
   data.seek(offset)
   data.write(new_value)
@@ -191,6 +192,6 @@ def align_data_to_nearest(data, size, padding_bytes=PADDING_BYTES):
   padding += padding_bytes[:padding_needed % len(padding_bytes)]
   data.write(padding)
 
-def pad_offset_to_nearest(offset, size):
+def pad_offset_to_nearest(offset: int, size: int) -> int:
   next_offset = offset + (size - offset % size) % size
   return next_offset

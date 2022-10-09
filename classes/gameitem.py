@@ -1,5 +1,7 @@
-import random
+from __future__ import annotations
 from dataclasses import dataclass
+from random import random
+from typing import AnyStr
 
 from logic.extras import item_id_to_name_dict
 
@@ -35,22 +37,18 @@ class GameItem:
     world_id: int = -1
     item_type: int = 9
 
-    @staticmethod
-    def random_junk(world_id: int, random_state):
+    @classmethod
+    def random_junk(cls, world_id: int, random_state: random) -> GameItem:
         item_val = random_state.choice(junk_item_ids)
-        return GameItem(game_item_id=item_val, world_id=world_id, junk_item=True)
+        return cls(game_item_id=item_val, world_id=world_id, junk_item=True)
 
-    @staticmethod
-    def random_junk_id(randomizer):
-        return randomizer.rng.choice(junk_ids)
-
-    def __eq__(self, game_item) -> bool:
+    def __eq__(self, game_item: GameItem) -> bool:
         return self.game_item_id == game_item.game_item_id and self.world_id == game_item.world_id
 
-    def soft_equality(self, game_item) -> bool:
+    def soft_equality(self, game_item: GameItem) -> bool:
         return self.game_item_id == game_item.game_item_id and self.world_id == game_item.world_id
 
-    def simple_offset_rep(self):
+    def simple_offset_rep(self) -> AnyStr:
         return f"W{self.world_id + 1} {item_id_to_name_dict[self.game_item_id]}"
 
     def set_item_type(self):
@@ -116,13 +114,13 @@ def is_progressive(item: GameItem) -> bool:
 def is_inventory_item(item: GameItem) -> bool:
     return item.game_item_id in inventory_item_ids
 
-junk_item_ids = list(range(0x01, 0x13))
+junk_item_ids: list[int] = list(range(0x01, 0x13))
 junk_item_ids.extend(list(range(0x15, 0x20)))
 junk_item_ids.extend(list(range(0x3F, 0x4B)))
 junk_item_ids.extend([0x82, 0x83])
 
 junk_ids = [0x01,0x02,0x03,0x04,0x05,0x06,0x0F,0x1F,0x45,0x46,0x47,0x48,0x82, 0x83, 0xB8]
-misc_item_ids = list(range(0x69, 0x73)) # Pearls + Songs
+misc_item_ids: list[int] = list(range(0x69, 0x73)) # Pearls + Songs
 misc_item_ids.extend(list(range(0xA3, 0xAB))) # Tingle Statues + Hurricane Spin
 misc_item_ids.append(0xB2) # Magic Meter Upgrade
 misc_item_ids.append(0x78) # Boat's Sail

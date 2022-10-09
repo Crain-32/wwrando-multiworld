@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from typing import List, Dict, AnyStr, OrderedDict, Any
 
 from logic.extras import item_id_to_name_dict, capital_case_with_space, item_id_dict
 
@@ -9,17 +10,17 @@ NO_STARTING_SWORD = "No Starting Sword"
 @dataclass
 class Settings:
 
-    starting_gear: list[int] = field(default_factory=list)
-    progressive_categories: dict[str, bool] = field(default_factory=dict)
+    starting_gear: List[int] = field(default_factory=list)
+    progressive_categories: Dict[AnyStr, bool] = field(default_factory=dict)
     keylunacy: bool = False
     randomize_charts: bool = False
     race_mode: bool = True
     num_race_mode_dungeons: int = 3
-    sword_mode: str = START_WITH_SWORD
+    sword_mode: AnyStr = START_WITH_SWORD
     starting_pohs: int = 0
     starting_hcs: int = 3
 
-    def __init__(self, options):
+    def __init__(self, options: OrderedDict[AnyStr, bool | List[int] | AnyStr]):
         self.progressive_categories = {
             "Dungeon": options.get("progression_dungeons"),
             "PuzzleSecretCave": options.get("progression_puzzle_secret_caves"),
@@ -68,7 +69,7 @@ class Settings:
         self.multiworld = options.get("multiplayer") == "Multiworld"
         self.sword_mode = options.get("sword_mode")
 
-    def spoiler_representation(self, world_id: int) -> str:
+    def spoiler_representation(self, world_id: int) -> AnyStr:
         output = f"--- World {world_id} Settings ---\n"
         for key, val in self.progressive_categories.items():
             if key == "NoSword":

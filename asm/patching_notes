@@ -1,0 +1,15 @@
+807baf54 ? Zunari - daNpc_Rsh1_c
+
+806f0af0 ? Bomb Island Shop Owner - daNpc_Bms1_c
+
+806fbb98 ? Beedle - daNpc_Bs1_c
+
+8077c210 ? Interface? d_a_npc_nz::daNpcNz_getShopBoughtMsg
+
+80711410 ? Potion Shop - daNpc_Ds1_c::next_msgStatus(
+
+80724404 ? Zephos OR Cyclos - daNpc_Hr_c::demoProcTact0
+
+? Salvage Id, but World ID isn't saving?
+        804801e8 3c 80 80 3f     lis        r4,-0x7fc1
+        804801ec 38 84 6b 4c     addi       r4,r4,0x6b4c

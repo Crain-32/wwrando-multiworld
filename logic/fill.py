@@ -8,13 +8,14 @@ from logic.extras import *
 from logic.search import game_beatable, get_accessible_locations
 
 
-def fill(worlds: list[World], random_state: Random):
+def fill(worlds: List[World], random_state: Random):
     worlds = place_hardcoded_items(worlds)
 
     worlds = determine_major_items(worlds)
     worlds = place_race_mode_items(worlds, random_state)
 
     # Dungeon Items are not consistent, getting dumped after this function
+    print(random_state.getstate())
     worlds = handle_dungeon_items(worlds, random_state)
     item_pool = get_item_pool(worlds)
     locations = get_location_pool(worlds)
@@ -42,7 +43,7 @@ def fill(worlds: list[World], random_state: Random):
     return worlds
 
 
-def place_hardcoded_items(worlds):
+def place_hardcoded_items(worlds) -> List[World]:
     for world in worlds:
         world.set_location("DefeatGanondorf", item_id_dict["GameBeatable"], world.world_id)
     return worlds
@@ -66,8 +67,8 @@ def determine_major_items(worlds: List[World]) -> List[World]:
     return replaced_worlds
 
 
-def generate_race_mode_items(race_mode_locations: list[Location], race_mode_items: list[GameItem],
-                             selectable_items: list[GameItem], random_state: Random) -> list[GameItem]:
+def generate_race_mode_items(race_mode_locations: List[Location], race_mode_items: List[GameItem],
+                             selectable_items: List[GameItem], random_state: Random) -> List[GameItem]:
     random_state.shuffle(selectable_items)
     while len(selectable_items) != 0 and len(race_mode_items) < len(race_mode_locations):
         next_race_mode_item = random_state.choice(selectable_items)
@@ -77,7 +78,7 @@ def generate_race_mode_items(race_mode_locations: list[Location], race_mode_item
     return race_mode_items
 
 
-def place_race_mode_items(worlds: list[World], random_state: Random) -> list[World]:
+def place_race_mode_items(worlds: List[World], random_state: Random) -> List[World]:
     item_pool = get_item_pool(worlds)
 
     race_mode_locations = [boss for world in worlds for boss in world.get_race_mode_bosses()]
@@ -102,21 +103,23 @@ def place_race_mode_items(worlds: list[World], random_state: Random) -> list[Wor
     return assumed_fill(worlds, race_mode_items, race_mode_locations, random_state)
 
 
-def handle_dungeon_items(worlds: list[World], random_state: Random) -> list[World]:
+def handle_dungeon_items(worlds: List[World], random_state: Random) -> List[World]:
     for world in worlds:
         for dungeon_name in DUNGEON_NAMES:
             if not world.world_settings.keylunacy:
                 dungeon_locations = [location for location in world.get_specific_dungeon_locations(dungeon_name)]
-                # TODO Incorrect Check here, we need to check for if Tingle Statues are active, not Dungeon Items.
-                # Otherwise, we fail to find any dungeon items if Dungeons aren't enabled.
-                logical_locations = list(filter((lambda loc: loc.current_item.game_item_id == item_id_dict["Nothing"]),
-                                                world.determine_progression_locations_from_list(dungeon_locations)))
+
+                logical_locations = list(filter((lambda loc: loc.current_item.game_item_id == item_id_dict["Nothing"] and loc.is_logical_location()),
+                                                dungeon_locations))
 
                 dungeon_keys = [keys for keys in world.get_dungeon_keys(dungeon_name)]
+                if len(logical_locations) == 0 or len(dungeon_locations) <= len(dungeon_keys):
+                    logical_locations = dungeon_locations
+
                 worlds = assumed_fill(worlds, dungeon_keys, logical_locations, random_state, world.world_id)
 
-                dungeon_extras = [extra for extra in world.get_dungeon_extras(dungeon_name)]
-                total_dungeon_locations = [location for location in world.get_specific_dungeon_locations(dungeon_name)]
+                dungeon_extras = world.get_dungeon_extras(dungeon_name)
+                total_dungeon_locations = world.get_specific_dungeon_locations(dungeon_name)
                 unplaced_location = list(filter((lambda loc: loc.current_item.game_item_id == item_id_dict["Nothing"]),
                                                 total_dungeon_locations))
                 fast_fill(unplaced_location, dungeon_extras, random_state)
@@ -202,8 +205,8 @@ def assumed_fill(worlds: List[World], logical_items: List[GameItem], logical_loc
 """
 
 
-def forward_fill_until_more_free_space(worlds: list[World], items_to_place: list[GameItem],
-                                       input_locations: list[Location], random_state: Random, open_locations=2):
+def forward_fill_until_more_free_space(worlds: List[World], items_to_place: List[GameItem],
+                                       input_locations: List[Location], random_state: Random, open_locations=2):
     allowed_locations = input_locations.copy()
     if len(allowed_locations) < len(items_to_place):
         raise RuntimeError(f"Tried to place {len(items_to_place)} items for {len(allowed_locations)} locations!")
@@ -224,7 +227,7 @@ def forward_fill_until_more_free_space(worlds: list[World], items_to_place: list
             forward_placed_items.append(item)
             access_locs = get_accessible_locations(worlds, forward_placed_items, placeable_locations)
             if len(access_locs) > 0:
-                loc = random.choice(placeable_locations)
+                loc = random_state.choice(placeable_locations)
                 placeable_locations.remove(loc)
                 print(f"Item: {item_id_to_name_dict[item.game_item_id]}:W{item.world_id} opened up more space")
                 worlds[loc.world_id].location_entries.remove(loc)
