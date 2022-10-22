@@ -1,7 +1,7 @@
 
 import struct
 from io import BytesIO
-from typing import AnyStr
+from typing import AnyStr, Union
 
 PADDING_BYTES = b"This is padding data to alignme"
 
@@ -50,7 +50,7 @@ def read_str(data, offset: int, length: int) -> AnyStr:
   string = string.rstrip("\0") # Remove trailing null bytes
   return string
 
-def try_read_str(data, offset, length):
+def try_read_str(data, offset, length) -> Union[AnyStr, None]:
   try:
     return read_str(data, offset, length)
   except UnicodeDecodeError:

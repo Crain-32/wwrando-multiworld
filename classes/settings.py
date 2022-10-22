@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import List, Dict, AnyStr, OrderedDict, Any
+from typing import List, Dict, AnyStr, OrderedDict, Any, Union
 
 from logic.extras import item_id_to_name_dict, capital_case_with_space, item_id_dict
 
@@ -20,7 +20,7 @@ class Settings:
     starting_pohs: int = 0
     starting_hcs: int = 3
 
-    def __init__(self, options: OrderedDict[AnyStr, bool | List[int] | AnyStr]):
+    def __init__(self, options: OrderedDict[AnyStr, Union[bool, List[int], AnyStr]]):
         self.progressive_categories = {
             "Dungeon": options.get("progression_dungeons"),
             "PuzzleSecretCave": options.get("progression_puzzle_secret_caves"),
