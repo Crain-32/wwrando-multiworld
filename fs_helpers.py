@@ -50,7 +50,7 @@ def read_str(data, offset: int, length: int) -> AnyStr:
   string = string.rstrip("\0") # Remove trailing null bytes
   return string
 
-def try_read_str(data, offset, length) -> AnyStr | None:
+def try_read_str(data, offset, length):
   try:
     return read_str(data, offset, length)
   except UnicodeDecodeError:
