@@ -136,7 +136,6 @@ swords = [
 normal_starting_items = [
   0x22, # Wind Waker
   0x6D, # Wind's Requiem
-  0x3B, # Hero's Shield
   0x72, # Song of Passing
   0x6E, # Ballad of Gales
   0x78  # Boat's Sail
