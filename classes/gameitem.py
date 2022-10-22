@@ -114,14 +114,16 @@ def is_progressive(item: GameItem) -> bool:
 def is_inventory_item(item: GameItem) -> bool:
     return item.game_item_id in inventory_item_ids
 
-junk_item_ids: list[int] = list(range(0x01, 0x13))
-junk_item_ids.extend(list(range(0x15, 0x20)))
-junk_item_ids.extend(list(range(0x3F, 0x4B)))
-junk_item_ids.extend([0x82, 0x83])
+junk_item_ids: list[int] = list(range(0x01, 0x09))
+junk_item_ids.extend([0x0F, 0x1A, 0x1F, 0x3F])
+junk_item_ids.extend(list(range(0x45, 0x4B)))
+junk_item_ids.extend([0x82, 0x83, 0x9D, 0x9E])
+
 
 junk_ids = [0x01,0x02,0x03,0x04,0x05,0x06,0x0F,0x1F,0x45,0x46,0x47,0x48,0x82, 0x83, 0xB8]
 misc_item_ids: list[int] = list(range(0x69, 0x73)) # Pearls + Songs
-misc_item_ids.extend(list(range(0xA3, 0xAB))) # Tingle Statues + Hurricane Spin
+misc_item_ids.extend(list(range(0xA3, 0xA8))) # Tingle Statues
+misc_item_ids.extend(list(range(0xAA, 0xB1))) # Hurricane Spin + Rupee/Bomb/Quiver expansions
 misc_item_ids.append(0xB2) # Magic Meter Upgrade
 misc_item_ids.append(0x78) # Boat's Sail
 misc_item_ids.append(0xDB) # Ghost Ship Chart

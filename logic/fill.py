@@ -9,6 +9,7 @@ from logic.search import game_beatable, get_accessible_locations
 
 
 def fill(worlds: List[World], random_state: Random):
+    worlds = fill_with_nothing(worlds)
     worlds = place_hardcoded_items(worlds)
 
     worlds = determine_major_items(worlds)
@@ -34,7 +35,6 @@ def fill(worlds: List[World], random_state: Random):
 
     worlds = assumed_fill(worlds, major_items, logical_locations, random_state)
     # remaining_logic_items = [list comprehension]
-
     # I can't remember why the assumed fill is twice yet, so I've removed it till the first one is stable
     # worlds = assumed_fill(worlds, major_items, item_pool, logical_locations, random_state)
     if not game_beatable(worlds):
@@ -46,6 +46,13 @@ def fill(worlds: List[World], random_state: Random):
 def place_hardcoded_items(worlds) -> List[World]:
     for world in worlds:
         world.set_location("DefeatGanondorf", item_id_dict["GameBeatable"], world.world_id)
+    return worlds
+
+
+def fill_with_nothing(worlds) -> List[World]:
+    for world in worlds:
+        for location in world.location_entries:
+            location.current_item = GameItem(item_id_dict['Nothing'], location.world_id)
     return worlds
 
 
