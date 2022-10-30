@@ -13,6 +13,7 @@ Changes:
 * The "seed hash" the randomizer adds to the name entry screen is now also included in log files.
 * Removed several minor cutscenes from Forest Haven where the camera panned around.
 * Inter-dungeon warp pots now have red-colored smoke to differentiate them from other warp pots.
+* You must enable Spoiler Log Generation to allow Map Select.
 
 Bug fixes:
 * Fixed permalinks not being properly decoded in some cases when Swordless mode is enabled and starting gear is customized.
