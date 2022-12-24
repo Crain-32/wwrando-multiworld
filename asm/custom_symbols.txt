@@ -81,17 +81,22 @@ sys/main.dol:
   read_custom_l_objectName_loop_for_dStage_searchName: 0x803FEBB4
   read_custom_l_objectName_loop_for_dStage_getName: 0x803FEBDC
   get_num_owned_tingle_statues: 0x803FEC08
-  custom_write_item_world_id: 0x803FEC7C
-  adjust_salvage_chests: 0x803FECC4
-  store_salvage_world_id: 0x803FECF4
-  get_item_detour: 0x803FED24
-  inject_world_id: 0x803FED48
-  world_id: 0x803FED80
-  item_id: 0x803FED84
-  give_pearl_and_raise_totg_if_necessary: 0x803FED88
-  give_temporary_sword_during_ganondorf_fight_in_swordless: 0x803FEE1C
-  give_temporary_sword_in_orcas_house_in_swordless: 0x803FEE38
-  remove_temporary_sword_when_loading_stage_in_swordless: 0x803FEE80
+  world_id: 0x803FEC7C
+  item_id: 0x803FEC80
+  event_happen_flag: 0x803FEC84
+  stage_id_pointer: 0x803FEC88
+  custom_write_item_world_id: 0x803FEC8C
+  adjust_salvage_chests: 0x803FECD4
+  store_salvage_world_id: 0x803FED04
+  get_item_detour: 0x803FED34
+  inject_world_id: 0x803FED58
+  mark_switch_stage_event: 0x803FED90
+  mark_tbox_stage_event: 0x803FEDFC
+  mark_story_event: 0x803FEE58
+  give_pearl_and_raise_totg_if_necessary: 0x803FEEB4
+  give_temporary_sword_during_ganondorf_fight_in_swordless: 0x803FEF48
+  give_temporary_sword_in_orcas_house_in_swordless: 0x803FEF64
+  remove_temporary_sword_when_loading_stage_in_swordless: 0x803FEFAC
   test_room_stage_name: 0x8022D034
   test_room_starting_items_list: 0x8022D03C
   test_room_spawn_id: 0x800531E3

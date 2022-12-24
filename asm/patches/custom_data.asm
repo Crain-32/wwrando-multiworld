@@ -80,6 +80,4 @@ custom_DMC:
 .align 2 ; Align to the next 4 bytes
 
 
-
-
 .close

@@ -1,5 +1,27 @@
 .open "sys/main.dol"
 .org @NextFreeSpace
+
+; Basically is a multiplayer struct we work with. Just in... Assembly...
+; byte worldId
+; byte itemId
+; byte stageId
+; bool eventHappenFlag
+; pointer* pointerStorage
+
+.global world_id
+world_id:
+  nop
+.global item_id
+item_id:
+  nop
+.global event_happen_flag
+event_happen_flag:
+  nop
+.global stage_id_pointer
+stage_id_pointer:
+  nop
+
+
 .global custom_write_item_world_id
 custom_write_item_world_id:
   stwu sp, -0x10 (sp)
@@ -76,6 +98,7 @@ get_item_detour:
   lis r12, world_id@ha
   addi r12, r12, world_id@l
   lbz r12, 0x3(r12)
+
 .global inject_world_id
   inject_world_id:
   cmpwi r12, 0x01          ; This World's ID needs to be inject here
@@ -97,13 +120,125 @@ get_item_detour:
   addi sp, sp, 0x10
   blr
 
+.global mark_switch_stage_event
+  mark_switch_stage_event:
+  stwu sp, -0x10 (sp)
+  mflr r0
+  stw r0, 0x14 (sp)
+  stw r31, 0x0C (sp)
+  stw r30, 0x08 (sp)
 
-.global world_id
-world_id:
-  nop
-.global item_id
-item_id:
-  nop
+  li r30, 1
+  lis r31, event_happen_flag@ha
+  addi r31, r31, event_happen_flag@l
+  stb r30, 0x0(r31)
+
+  lis r31, stage_id_pointer@ha
+  addi r31, r31, stage_id_pointer@l
+  stw r3, 0x0(r31)
+
+  lwz r31, 0x0C (sp)
+  lwz r30, 0x8 (sp)
+
+  srawi r0, r31, 0x5
+  rlwinm r0, r0, 0x2, 0x0, 0x1D
+  add r5, r30, r0
+  lwz r4, 0x4(r5)
+  li r3, 0x1
+  rlwinm r0, r31, 0x0, 0x1B, 0x1F
+  slw r0, r3, r0
+  or r0, r4, r0
+  stw r0, 0x4(r5)
+
+  lwz r0, 0x14 (sp)
+  mtlr r0
+  addi sp, sp, 0x10
+  blr
+
+.global mark_tbox_stage_event
+  mark_tbox_stage_event:
+  stwu sp, -0x10 (sp)
+  mflr r0
+  stw r0, 0x14 (sp)
+  stw r29, 0x0C (sp)
+  stw r28, 0x08 (sp)
+
+  li r28, 2
+  lis r29, event_happen_flag@ha
+  addi r29, r29, event_happen_flag@l
+  stb r28, 0x0(r29)
+
+  lis r29, stage_id_pointer@ha
+  addi r29, r29, stage_id_pointer@l
+  stw r3, 0x0(r29)
+
+  lwz r29, 0x0C (sp)
+  lwz r28, 0x8 (sp)
+
+  lwz r3, 0x0 (r30)
+  li r0, 0x1
+  slw r0, r0, r31
+  or r0, r3, r0
+  stw r0, 0x0(r30)
+  lwz r0, 0x14 (sp)
+  mtlr r0
+  addi sp, sp, 0x10
+  blr
+
+.global mark_story_event
+  mark_story_event:
+  stwu sp, -0x10 (sp)
+  stw r6, 0x14 (sp)
+  stw r31, 0x0C (sp)
+  stw r30, 0x08 (sp)
+
+  li r30, 3
+  lis r31, event_happen_flag@ha
+  addi r31, r31, event_happen_flag@l
+  stb r30, 0x0(r31)
+
+  rlwinm r6, r4, 0x18, 0x18, 0x1f
+  lbzx r5, r3, r6
+  rlwinm r0, r4, 0x0, 0x18, 0x1f
+  or r0, r5, r0
+  stbx r0, r3, r6
+
+  add r30, r3, r6
+  lis r31, stage_id_pointer@ha
+  addi r31, r31, stage_id_pointer@l
+  stw r30, 0x0(r31)
+
+
+  lwz r31, 0x0C (sp)
+  lwz r30, 0x8 (sp)
+  lwz r0, 0x14 (sp)
+  mtlr r0
+  addi sp, sp, 0x10
+  blr
+
+
+.org 0x8005C298 ; "dSv_memBit_c::onSwitch"
+ bl mark_switch_stage_event
+ nop
+ nop
+ nop
+ nop
+ nop
+ nop
+ nop
+ nop
+
+.org 0x8005C15C ; "dSv_memBit_c::onTbox"
+ bl mark_tbox_stage_event
+ nop
+ nop
+ nop
+ nop
+
+.org 0x8005CB04 ; "dSv_event_c::onEventBit"
+  mflr r6
+  bl mark_story_event
+; It kills Korl for some reason.
 
 
 .org 0x800C2E08
@@ -114,6 +249,8 @@ item_id:
   nop
   nop
 .close
+
+
 
 .open "files/rels/d_a_tbox.rel" ; Treasure Chests
 .org 0x2764 ; In actionOpenWait__8daTbox_cFv
