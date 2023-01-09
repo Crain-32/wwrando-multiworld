@@ -43,9 +43,9 @@
 ; First we modify the createItemForBoss function itself to not hardcode the item ID as 8 (Heart Container).
 ; We nop out the two instructions that load 8 into r4. This way it simply passes whatever it got as argument r4 into the next function call to createItem.
 .org 0x80026A90 ; In fopAcM_createItemForBoss
-  nop
+  nop ; We need to BL here to extract the World ID from the upper R4, and leave only the lower 8 of R4 for the item Id.
 .org 0x80026AB0 ; In fopAcM_createItemForBoss
-  nop
+  nop ; See notes 2 above this.
 ; Second we modify the code for the "disappear" cloud of smoke when the boss dies.
 ; This cloud of smoke is what spawns the item when Gohma, Kalle Demos, Helmaroc King, and Jalhalla die.
 ; So we need a way to pass the item ID from the boss's code to the disappear cloud's parameters and store them there.
@@ -54,12 +54,17 @@
 ; We change it to be a halfword and stored with the mask FFFF0000.
 ; The lower byte is unchanged from vanilla, it's still whatever argument r7 used to be for.
 ; But the upper byte, which used to be unused, now has the item ID in it.
+; Kalle Demos calls this from 805C6D58?
 .org 0x80027AC4 ; In fopAcM_createDisappear
   rlwimi r4, r7, 16, 0, 15
+
+
 ; Then we need to read the item ID parameter when the cloud is about to call createItemForBoss.
+; Is this the d_a_boss_item Tag??
 .org 0x800E7A1C ; In daDisappear_Execute
   lbz r4, 0x00B0(r7)
 .close
+
 ; Third we change how the boss item ACTR calls createItemForBoss.
 ; (This is the ACTR that appears if the player skips getting the boss item after killing the boss, and instead comes back and does the whole dungeon again.)
 ; Normally it sets argument r4 to 1, but createItemForBoss doesn't even use argument r4.
@@ -67,8 +72,8 @@
 ; This param was unused and just 00 in the original game, but the randomizer will set it to the item ID it randomizes to that location.
 ; Then we will be calling createItemForBoss with the item ID to spawn in argument r4. Which due to the above change, will be used correctly now.
 .open "files/rels/d_a_boss_item.rel"
-.org 0x1C4 ; In daBossItem_Create
-  lbz r4, 0x00B2(r30)
+.org 0x1C4 ; In daBossItem_Create 0x805D_A030
+  lbz r4, 0x00B2(r30) ; This should be the equivalent of 0x00FFFF00 for the mask? Lower is Item ID, upper is World ID
 .close
 ; The final change necessary is for all 6 bosses' code to be modified so that they pass the item ID to spawn to a function call.
 ; For Gohdan and Molgera, the call is to createItemForBoss directly, so argument r4 needs to be the item ID.

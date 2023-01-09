@@ -142,8 +142,11 @@ def change_actor_item(randomizer: 'Randomizer', arc_path, actor_index, layer, it
     else:
         dzx = randomizer.get_arc(arc_path).get_file("room.dzr")
     actr = dzx.entries_by_type_and_layer("ACTR", layer)[actor_index]
-    if actr.actor_class_name in ["d_a_item", "d_a_boss_item"]:
+    if actr.actor_class_name == "d_a_item":
         actr.item_id = item_id
+    elif actr.actor_class_name == "d_a_boss_item":
+        actr.item_id = item_id
+        actr.world_id = 0x6969
     else:
         raise Exception("%s/ACTR%03X is not an item" % (arc_path, actor_index))
 

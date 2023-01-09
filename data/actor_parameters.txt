@@ -305,6 +305,9 @@ d_a_boss_item:
   item_id:
     Bitfield name: params
     Mask: 0x0000FF00
+  world_id:
+    Bitfield name: params
+    Mask: 0xFFFF0000
 
 d_a_bpw:
   unknown_param_1:
