@@ -14,7 +14,7 @@ from fs_helpers import *
 from logic.extras import DUNGEON_NAME_DICT
 from wwlib import texture_utils
 from wwlib.rel import REL
-from wwrando_paths import ASSETS_PATH, ASM_PATH, SEEDGEN_PATH
+from wwrando_paths import ASSETS_PATH, ASM_PATH, SEEDGEN_PATH, DATA_PATH
 
 try:
   from keys.seed_key import SEED_KEY
@@ -2289,3 +2289,9 @@ def add_shortcut_warps_into_dungeons(self):
   swc00.scale_z = 3 * 0x10
   
   fh_dzr.save_changes()
+
+def use_english_debug_menu(self):
+  english_menu_path = os.path.join(DATA_PATH, "Menu1.dat")
+  with open(english_menu_path, "rb") as f:
+    english_menu = BytesIO(f.read())
+  self.replace_raw_file("files/res/Menu/Menu1.dat", english_menu)

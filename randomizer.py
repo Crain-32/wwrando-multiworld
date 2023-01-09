@@ -91,7 +91,8 @@ class Randomizer:
       self.randomize_items = False
     else:
       self.randomize_items = True
-    self.map_select = ("-mapselect" in cmd_line_args)
+    self.map_select_english = ("-mapselect-eng" in cmd_line_args)
+    self.map_select = ("-mapselect" in cmd_line_args) or self.map_select_english
     self.heap_display = ("-heap" in cmd_line_args)
     
     self.test_room_args = None
@@ -203,6 +204,8 @@ class Randomizer:
         patcher.apply_patch(self, "remove_music")
       if self.map_select and not self.options.get("do_not_generate_spoiler_log"):
         patcher.apply_patch(self, "map_select")
+      if self.map_select_english:
+        tweaks.use_english_debug_menu(self)
       if IS_RUNNING_FROM_SOURCE or "BETA" in VERSION_WITHOUT_COMMIT:
         tweaks.enable_developer_mode(self)
       if self.heap_display:
