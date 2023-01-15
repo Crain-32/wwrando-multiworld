@@ -267,3 +267,9 @@ get_item_detour:
   bl store_salvage_world_id
 .close
 
+
+.open "files/rels/d_a_boss_item.rel"
+.org 0x1C4 ; In daBossItem_Create 0x805D_A030
+  bl mark_story_event ; SHORT TERM FOR TESTING, THIS IS NOT SAFE
+  ;lbz r4, 0x00B2(r30) ; This should be the equivalent of 0x00FFFF00 for the mask? Lower is Item ID, upper is World ID
+.close
