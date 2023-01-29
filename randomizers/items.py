@@ -30,6 +30,7 @@ def change_item(randomizer: 'Randomizer', path: AnyStr, item_id: int, world_id: 
         r"^([^/]+/[^/]+\.arc)/Event([0-9A-F]{3}):[^/]+/Actor([0-9A-F]{3})/Action([0-9A-F]{3})$", path)
     scob_match: Match | None = re.search(r"^([^/]+/[^/]+\.arc)(?:/Layer([0-9a-b]))?/ScalableObject([0-9A-F]{3})$", path)
     actor_match: Match | None = re.search(r"^([^/]+/[^/]+\.arc)(?:/Layer([0-9a-b]))?/Actor([0-9A-F]{3})$", path)
+    inject_match: Match | None = re.search(r"^inject_(rels/[^.]+\.rel)@(.*)$", path)
 
     if rel_match:
         rel_path = rel_match.group(1)
@@ -84,8 +85,15 @@ def change_item(randomizer: 'Randomizer', path: AnyStr, item_id: int, world_id: 
             layer = None
         actor_index = int(actor_match.group(3), 16)
         change_actor_item(randomizer, arc_path, actor_index, layer, item_id, world_id)
+    elif inject_match:
+        inject_world_id(randomizer, inject_match.group(1), inject_match.group(2), world_id)
     else:
         raise Exception("Invalid item path: " + path)
+
+def inject_world_id(randomizer: 'Randomizer', rel_path: AnyStr, offset_symbol: AnyStr, world_id: int = 0):
+    path = os.path.join("files", rel_path)
+    rel = randomizer.get_rel(path)
+    rel.write_data(write_u8, randomizer.custom_symbols[f"files/{rel_path}"][offset_symbol] + 3, world_id)
 
 
 def change_hardcoded_item_in_dol(randomizer: 'Randomizer', address, item_id: int, world_id: int = 0):
@@ -146,7 +154,6 @@ def change_actor_item(randomizer: 'Randomizer', arc_path, actor_index, layer, it
         actr.item_id = item_id
     elif actr.actor_class_name == "d_a_boss_item":
         actr.item_id = item_id
-        actr.world_id = 0x6969
     else:
         raise Exception("%s/ACTR%03X is not an item" % (arc_path, actor_index))
 

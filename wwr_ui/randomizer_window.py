@@ -222,7 +222,6 @@ class WWRandomizerWindow(QMainWindow):
   def randomize(self):
     if int(self.get_option_value("world_id")) <= 0 or int(self.get_option_value("world_id")) > int(self.get_option_value("world_count")):
       QMessageBox.warning(self, "Improper Multiworld Config", f"""World Id must be between 1 and {self.get_option_value("world_count")}""")
-      print("Finished")
       return
     clean_iso_path = self.settings["clean_iso_path"].strip()
     output_folder = self.settings["output_folder"].strip()

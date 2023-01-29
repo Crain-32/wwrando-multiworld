@@ -238,7 +238,6 @@ get_item_detour:
 .org 0x8005CB04 ; "dSv_event_c::onEventBit"
   mflr r6
   bl mark_story_event
-; It kills Korl for some reason.
 
 
 .org 0x800C2E08
@@ -268,8 +267,116 @@ get_item_detour:
 .close
 
 
-.open "files/rels/d_a_boss_item.rel"
-.org 0x1C4 ; In daBossItem_Create 0x805D_A030
-  bl mark_story_event ; SHORT TERM FOR TESTING, THIS IS NOT SAFE
-  ;lbz r4, 0x00B2(r30) ; This should be the equivalent of 0x00FFFF00 for the mask? Lower is Item ID, upper is World ID
+.open "files/rels/d_a_btd.rel"
+.org 0x36f8 ; in end__FP9btd_class
+  b store_gohma_world_id
+.org @NextFreeSpace
+.global store_gohma_world_id
+store_gohma_world_id:
+  lis r6, world_id@ha
+  addi r6, r6, world_id@l
+.global gohma_world_id
+gohma_world_id:
+  li r7, 0x00
+  stw r7, 0x0 (r6)
+  li r6, 0x02
+  b 0x36FC
+.close
+
+.open "files/rels/d_a_bmd.rel"
+.org 0x2B28 ; in core_move__FP9bmd_class
+  b store_kalle_demos_world_id
+.org @NextFreeSpace
+.global store_kalle_demos_world_id
+store_kalle_demos_world_id:
+  lis r6, world_id@ha
+  addi r6, r6, world_id@l
+  ; Inject World ID here
+.global kalle_demos_world_id
+kalle_demos_world_id:
+  li r7, 0x00
+  stw r7, 0x0 (r6)
+  li r6, 0x02
+  b 0x2B2C
+.close
+
+.open "files/rels/d_a_bst.rel" ; r8 = 1, r9
+.org 0x9D54
+  b store_gohdan_world_id
+.org @NextFreeSpace
+.global store_gohdan_world_id
+store_gohdan_world_id:
+  lis r8, world_id@ha
+  addi r8, r8, world_id@l
+.global gohdan_world_id
+gohdan_world_id:
+  li r9, 0x00
+  stw r9, 0x0 (r8)
+  li r8, 0x01
+  b 0x9D58
+.close
+
+.open "files/rels/d_a_bdk.rel"
+.org 0x5CC8 ; in end__FP9btd_class
+  b store_helmaroc_world_id
+.org @NextFreeSpace
+.global store_helmaroc_world_id
+store_helmaroc_world_id:
+  lis r6, world_id@ha
+  addi r6, r6, world_id@l
+.global helmaroc_world_id
+helmaroc_world_id:
+  li r7, 0x00
+  stw r7, 0x0 (r6)
+  li r6, 0x02
+  b 0x5CCC
+.close
+
+.open "files/rels/d_a_bpw.rel"
+.org 0x8778 ; in end__FP9btd_class
+  b store_jahalla_world_id
+.org @NextFreeSpace
+.global store_jahalla_world_id
+store_jahalla_world_id:
+  lis r6, world_id@ha
+  addi r6, r6, world_id@l
+.global jahalla_world_id
+jahalla_world_id:
+  li r7, 0x00
+  stw r7, 0x0 (r6)
+  li r6, 0x02
+  b 0x877C
+.close
+
+.open "files/rels/d_a_bwd.rel"
+.org 0x6D8C
+  b store_molgera_world_id
+.org @NextFreeSpace
+.global store_molgera_world_id
+store_molgera_world_id:
+  lis r6, world_id@ha
+  addi r6, r6, world_id@l
+.global molgera_world_id
+molgera_world_id:
+  li r8, 0x00
+  stw r8, 0x0 (r6)
+  li r6, 0x00
+  b 0x6D90
+.close
+
+.open "files/rels/d_a_obj_hsehi1.rel"
+.org 0x1B48
+  b store_tablet_world_id
+.org @NextFreeSpace
+.global store_tablet_world_id
+store_tablet_world_id:
+  lis r5, world_id@ha
+  addi r5, r5, world_id@l
+.global tablet_world_id
+tablet_world_id:
+  li r30, 0x69
+  stw r30, 0x0 (r5)
+  mr r30, r3
+  lis r3,-0x7FC4
+  b 0x1B50
 .close

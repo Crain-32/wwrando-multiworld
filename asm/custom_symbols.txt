@@ -170,3 +170,24 @@ files/rels/d_a_obj_warpt.rel:
   set_env_color_for_warp_pot_particles: 0x32A8
   custom_warp_pot_prm_color: 0x32D0
   custom_warp_pot_env_color: 0x32D4
+files/rels/d_a_btd.rel:
+  store_gohma_world_id: 0xA928
+  gohma_world_id: 0xA930
+files/rels/d_a_bmd.rel:
+  store_kalle_demos_world_id: 0x7C28
+  kalle_demos_world_id: 0x7C30
+files/rels/d_a_bst.rel:
+  store_gohdan_world_id: 0xCF64
+  gohdan_world_id: 0xCF6C
+files/rels/d_a_bdk.rel:
+  store_helmaroc_world_id: 0xEA88
+  helmaroc_world_id: 0xEA90
+files/rels/d_a_bpw.rel:
+  store_jahalla_world_id: 0xEFE0
+  jahalla_world_id: 0xEFE8
+files/rels/d_a_bwd.rel:
+  store_molgera_world_id: 0xB0F8
+  molgera_world_id: 0xB100
+files/rels/d_a_obj_hsehi1.rel:
+  store_tablet_world_id: 0x29D0
+  tablet_world_id: 0x29D8

@@ -54,7 +54,6 @@
 ; We change it to be a halfword and stored with the mask FFFF0000.
 ; The lower byte is unchanged from vanilla, it's still whatever argument r7 used to be for.
 ; But the upper byte, which used to be unused, now has the item ID in it.
-; Kalle Demos calls this from 805C6D58?
 .org 0x80027AC4 ; In fopAcM_createDisappear
   rlwimi r4, r7, 16, 0, 15
 
@@ -73,7 +72,7 @@
 ; Then we will be calling createItemForBoss with the item ID to spawn in argument r4. Which due to the above change, will be used correctly now.
 .open "files/rels/d_a_boss_item.rel"
 .org 0x1C4 ; In daBossItem_Create 0x805D_A030
-  lbz r4, 0x00B2(r30) ; This should be the equivalent of 0x00FFFF00 for the mask? Lower is Item ID, upper is World ID
+  lbz r4, 0x00B2(r30) ; This should be the equivalent of 0x00FFFF00 for the mask?
 .close
 ; The final change necessary is for all 6 bosses' code to be modified so that they pass the item ID to spawn to a function call.
 ; For Gohdan and Molgera, the call is to createItemForBoss directly, so argument r4 needs to be the item ID.
