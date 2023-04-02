@@ -1,0 +1,5 @@
+name: Manual run
+
+on:
+  workflow_run:
+    workflows: [ Build ]
