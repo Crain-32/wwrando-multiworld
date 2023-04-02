@@ -1,8 +1,6 @@
 name: Build
 
 on:
-  workflow_run:
-    workflows: [ Build ]
   push:
     branches: [ master ]
   pull_request:
