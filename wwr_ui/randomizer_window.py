@@ -512,6 +512,12 @@ class WWRandomizerWindow(QMainWindow):
         value = widget.value() - widget.minimum()
         assert 0 <= value < (2 ** box_length)
         bitswriter.write(value, box_length)
+      elif isinstance(widget, QLineEdit):
+        if len(value) == 0:
+          value = '0'
+        int_value = int(value)
+        assert 0 <= int_value <= 255
+        bitswriter.write(int_value, 8)
       elif widget == self.ui.starting_gear:
         # randomized_gear is a complement of starting_gear
         for i in range(len(REGULAR_ITEMS)):
@@ -563,6 +569,9 @@ class WWRandomizerWindow(QMainWindow):
       if isinstance(widget, QAbstractButton):
         boolean_value = bitsreader.read(1)
         self.set_option_value(option_name, boolean_value)
+      elif isinstance(widget, QLineEdit):
+        int_value = str(bitsreader.read(8))
+        self.set_option_value(option_name, int_value)
       elif isinstance(widget, QComboBox):
         index = bitsreader.read(8)
         if index >= widget.count() or index < 0:

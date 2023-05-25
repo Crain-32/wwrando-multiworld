@@ -7,9 +7,9 @@ SWORDLESS = "Swordless"
 START_WITH_SWORD = "Start with Hero's Sword"
 NO_STARTING_SWORD = "No Starting Sword"
 
+
 @dataclass
 class Settings:
-
     starting_gear: List[int] = field(default_factory=list)
     progressive_categories: Dict[AnyStr, bool] = field(default_factory=dict)
     keylunacy: bool = False
@@ -51,13 +51,14 @@ class Settings:
             "Platform": options.get("progression_platforms_rafts"),
             "NoSword": (options.get("sword_mode") == NO_STARTING_SWORD)
         }
-        self.keylunacy = options.get("keylunacy")
+        self.keylunacy = False # options.get("keylunacy")
         self.race_mode = options.get("race_mode")
         self.num_race_mode_dungeons = int(options.get("num_race_mode_dungeons"))
         self.starting_hcs = int(options.get("starting_hcs"))
         self.starting_pohs = int(options.get("starting_pohs"))
         self.randomize_charts = options.get("randomize_charts")
-        self.starting_gear = list(map((lambda prog_str_item_id: item_id_dict[prog_str_item_id.replace(" ", "")]), options.get("starting_gear")))
+        self.starting_gear = list(map((lambda prog_str_item_id: item_id_dict[prog_str_item_id.replace(" ", "")]),
+                                      options.get("starting_gear")))
         starting_shards = int(options.get("num_starting_triforce_shards"))
         if starting_shards > 0:
             self.starting_gear.extend(
@@ -70,7 +71,7 @@ class Settings:
         self.sword_mode = options.get("sword_mode")
 
     def spoiler_representation(self, world_id: int) -> AnyStr:
-        output = f"--- World {world_id} Settings ---\n"
+        output = f"--- World {world_id + 1} Settings ---\n"
         for key, val in self.progressive_categories.items():
             if key == "NoSword":
                 continue

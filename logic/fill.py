@@ -16,16 +16,18 @@ def fill(worlds: List[World], random_state: Random):
     worlds = place_race_mode_items(worlds, random_state)
 
     # Dungeon Items are not consistent, getting dumped after this function
-    print(random_state.getstate())
+    # print(random_state.getstate())
     worlds = handle_dungeon_items(worlds, random_state)
     item_pool = get_item_pool(worlds)
     locations = get_location_pool(worlds)
 
-    major_items = [item for item in item_pool
-                   if item.major_item]
-    for item in major_items:
+    major_items: List[GameItem] = [item for item in item_pool
+                                   if item.major_item]
+
+    for item in major_items: # Remove our Major Items from the World Item Pool
         worlds[item.world_id].item_pool.remove(item)
-    logical_locations = list(filter((lambda loc: loc.is_logical_location()), locations))  # Filter out Logical Locations
+
+    logical_locations: List[Location] = list(filter((lambda loc: loc.is_logical_location()), locations))  # Filter out Logical Locations
 
     if len(major_items) > len(logical_locations):
         print(f"Major Items amount: {len(major_items)}")
@@ -43,16 +45,16 @@ def fill(worlds: List[World], random_state: Random):
     return worlds
 
 
-def place_hardcoded_items(worlds) -> List[World]:
+def place_hardcoded_items(worlds: List[World]) -> List[World]:
     for world in worlds:
         world.set_location("DefeatGanondorf", item_id_dict["GameBeatable"], world.world_id)
     return worlds
 
 
-def fill_with_nothing(worlds) -> List[World]:
+def fill_with_nothing(worlds: List[World]) -> List[World]:
     for world in worlds:
         for location in world.location_entries:
-            location.current_item = GameItem(item_id_dict['Nothing'], location.world_id)
+            location.current_item = GameItem(game_item_id=item_id_dict['Nothing'], world_id=location.world_id)
     return worlds
 
 
@@ -116,7 +118,8 @@ def handle_dungeon_items(worlds: List[World], random_state: Random) -> List[Worl
             if not world.world_settings.keylunacy:
                 dungeon_locations = [location for location in world.get_specific_dungeon_locations(dungeon_name)]
 
-                logical_locations = list(filter((lambda loc: loc.current_item.game_item_id == item_id_dict["Nothing"] and loc.is_logical_location()),
+                logical_locations = list(filter((lambda loc: loc.current_item.game_item_id == item_id_dict[
+                    "Nothing"] and loc.is_logical_location()),
                                                 dungeon_locations))
 
                 dungeon_keys = [keys for keys in world.get_dungeon_keys(dungeon_name)]
@@ -150,8 +153,8 @@ def assumed_fill(worlds: List[World], logical_items: List[GameItem], logical_loc
         raise RuntimeWarning(f"Tried to select world id {world_id} with only {len(worlds)} worlds!")
 
     retries = 5
-    unsuccessfulPlacement = True
-    while unsuccessfulPlacement:
+    unsuccessful_placement = True
+    while unsuccessful_placement:
         if retries == 0:
             print(
                 f"Ran out of Retries, attempting to forward fill {len(logical_locations)} locations with {len(logical_items)} items")
@@ -159,12 +162,12 @@ def assumed_fill(worlds: List[World], logical_items: List[GameItem], logical_loc
             retries = 5
             continue
         retries -= 1
-        unsuccessfulPlacement = False
+        unsuccessful_placement = False
         random_state.shuffle(logical_items)
         rollbacks: List[AnyStr] = []
         while len(logical_items) > 0:
-            item_pool = get_item_pool(worlds)
-            next_item = logical_items.pop()
+            item_pool = get_item_pool(worlds)  # Consumables, Unplaced Items
+            next_item = logical_items.pop()  # What we're trying to place
             items_not_placed = logical_items.copy()
             items_not_placed.extend(item_pool.copy())  # Note, we already remove logical items
             # from the world's item pool before this function.
@@ -173,6 +176,7 @@ def assumed_fill(worlds: List[World], logical_items: List[GameItem], logical_loc
             # The above is likely linked to the current issues because it finds the accessible locations and
             # updates them. However, testing hasn't proven this.
 
+            # print(f"Accessible Locations {len(accessible_locations)}")
             if len(accessible_locations) == 0:
                 print(f"No Accessible Locations to place {next_item}. Remaining Attempts this cycle: {retries}")
                 # Current broken seeds don't seem to  call this, so I'm worried yet.
@@ -184,7 +188,7 @@ def assumed_fill(worlds: List[World], logical_items: List[GameItem], logical_loc
                     worlds[location.world_id].area_entries[location.area_name].locations.append(location)
                 logical_items.append(next_item)
                 rollbacks.clear()
-                unsuccessfulPlacement = True
+                unsuccessful_placement = True
                 break
 
             if next_item.chart_for_sunken_treasure:
@@ -195,7 +199,6 @@ def assumed_fill(worlds: List[World], logical_items: List[GameItem], logical_loc
 
             random_state.shuffle(accessible_locations)
             location = accessible_locations.pop()
-
             worlds[location.world_id].location_entries.remove(location)  # We could use a dict [str, Location],
             # but this works just fine.
             worlds[location.world_id].area_entries[location.area_name].locations.remove(location)

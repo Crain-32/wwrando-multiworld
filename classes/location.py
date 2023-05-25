@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import Iterable, Set
 
@@ -9,23 +10,23 @@ from logic.extras import *
 
 @dataclass
 class Location:
-    name: str
+    name: AnyStr
     category_set: Set[AnyStr]
-    area_name: str
+    area_name: AnyStr
     requirement: Requirement | List[Requirement]
-    filePaths: List[str]
+    filePaths: List[AnyStr]
     current_item: GameItem = GameItem(game_item_id=item_id_dict["Nothing"])
     world_id: int = -1
     logical: bool = False
 
     @classmethod
-    def from_dict(cls, dict_obj, area_name: str) -> Location:
+    def from_dict(cls, dict_obj, area_name: AnyStr) -> Location:
         return cls(name=dict_obj["Name"],
-                        category_set=set(dict_obj["Category"]),
-                        requirement=Requirement.from_dict(dict_obj["Needs"]),
-                        filePaths=dict_obj["Paths"],
-                        area_name=area_name
-                        )
+                   category_set=set(dict_obj["Category"]),
+                   requirement=Requirement.from_dict(dict_obj["Needs"]),
+                   filePaths=dict_obj["Paths"],
+                   area_name=area_name
+                   )
 
     def is_logical_location(self) -> bool:
         return self.logical and self.name != "DefeatGanondorf"

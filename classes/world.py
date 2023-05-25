@@ -33,10 +33,10 @@ class World:
         self.play_through_spheres = []
         self.assumed_items = []
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(self.world_id)
 
-    def set_item_pools(self):
+    def set_item_pools(self) -> None:
         starting_item_pool = generate_starting_items(self.world_settings)
         game_item_pool = generate_game_item_pool(self.world_settings, starting_item_pool)
         self.item_pool = list(
@@ -48,7 +48,7 @@ class World:
         )
         self.starting_items = [GameItem(game_item_id=item, world_id=self.world_id) for item in starting_item_pool]
 
-    def change_world_id(self, different_id: int):
+    def change_world_id(self, different_id: int) -> None:
         self.world_id = different_id
         if 'starting_items' in self.__dict__.keys() and isinstance(self.starting_items, list):
             for item in self.starting_items:
@@ -64,7 +64,7 @@ class World:
             for loc in self.location_entries:
                 loc.world_id = different_id
 
-    def determine_chart_mappings(self, random_state: random):
+    def determine_chart_mappings(self, random_state: random) -> None:
         chart_mappings = [
             "TreasureChart25",
             "TreasureChart7",
@@ -122,20 +122,18 @@ class World:
         for sector, chart in enumerate(chart_mappings):
             self._replace_macro_item(f"Chart for Island {sector + 1}", Requirement(REQUIREMENT_HAS_ITEM, [chart]))
 
-    def set_progression_locations(self):
+    def set_progression_locations(self) -> None:
         self.location_entries = self.determine_progression_locations_from_list(self.location_entries)
 
     def determine_progression_locations_from_list(self, location_list: List[Location]) -> List[Location]:
-        processedLocations: List[Location] = list()
+        processed_locations: List[Location] = list()
         for loc in location_list:
             if self.location_category_cache(loc.category_set):
                 loc.make_logical()
-            processedLocations.append(loc)
-        return processedLocations
+            processed_locations.append(loc)
+        return processed_locations
 
-
-
-    def determine_race_mode_dungeons(self, random_state: random):
+    def determine_race_mode_dungeons(self, random_state: random) -> None:
         if self.world_settings.race_mode:
             shuffled_dungeons = DUNGEON_NAMES.copy()
             random_state.rng.shuffle(shuffled_dungeons)
@@ -146,7 +144,7 @@ class World:
                 else:
                     self._set_dungeon_non_progressive(dungeon_name)
 
-    def load_world(self, world_file:AnyStr="world.json", macro_file:AnyStr="Macros.json"):
+    def load_world(self, world_file: AnyStr = "world.json", macro_file: AnyStr = "Macros.json") -> None:
         self.area_entries = World.load_parse_world(os.path.join(DATA_PATH, world_file), self.world_id)
         self.macros = {macro.name: macro for macro in World.load_parse_macros(os.path.join(DATA_PATH, macro_file))}
         self.location_entries = list(
@@ -195,7 +193,7 @@ class World:
         loc.current_item = GameItem(game_item_id=item_val, world_id=world_id)
         self.location_entries.append(loc)
 
-    def get_dungeon_locations(self) -> list[Location]:
+    def get_dungeon_locations(self) -> List[Location]:
         dungeon_locations = []
         for dungeon_name in self.race_mode_dungeons:
             dungeon_locations.extend(
@@ -212,10 +210,11 @@ class World:
                 self.location_entries)
         )
 
-    def get_race_mode_bosses(self):
+    def get_race_mode_bosses(self) -> List[AnyStr]:
         boss_loc = []
         for dungeon_name in self.race_mode_dungeons:
-            boss_loc += list(filter((lambda loc: dungeon_name in loc.name and "HeartContainer" in loc.name), self.location_entries))
+            boss_loc += list(
+                filter((lambda loc: dungeon_name in loc.name and "HeartContainer" in loc.name), self.location_entries))
         return boss_loc
 
     def get_dungeon_keys(self, dungeon_name: AnyStr) -> List[GameItem]:
@@ -275,7 +274,6 @@ class World:
         return [key for key, val in self.world_settings.progressive_categories.items()
                 if val == True] + ["DefeatGanondorf", "Multiworld", "Race Mode"]
 
-
     def location_category_cache(self, categories: Set[AnyStr]) -> bool:
         basic_cats: bool = all([location_cat in self._location_category_list() for location_cat in categories])
         return basic_cats
@@ -287,7 +285,7 @@ class World:
 
     def required_items(self) -> List[int]:
         item_id_vals: List[int] = list()
-        area_name_pool : List[AnyStr] = list(self.area_entries.keys())
+        area_name_pool: List[AnyStr] = list(self.area_entries.keys())
         logical_area_names: Set[AnyStr] = set()
         location_names: List[AnyStr] = [loc.name for loc in self.location_entries]
         for area_key, area_entry in self.area_entries.items():
@@ -299,7 +297,8 @@ class World:
         while new_areas_found:
             new_areas_found = False
             for area_name in area_name_pool:
-                if any(filter((lambda area_exit_name: area_exit_name in logical_area_names), self.area_entries[area_name].exits.keys())):
+                if any(filter((lambda area_exit_name: area_exit_name in logical_area_names),
+                              self.area_entries[area_name].exits.keys())):
                     new_areas_found = True
                     found_area_names.append(area_name)
             for new_area_name in found_area_names:
@@ -313,4 +312,4 @@ class World:
         for target_area in logical_area_names:
             item_id_vals += self.area_entries[target_area].get_required_item_id(self.macros, list(logical_area_names))
 
-        return list(set(item_id_vals)) # Sad way to create a unique value list
+        return list(set(item_id_vals))  # Sad way to create a unique value list

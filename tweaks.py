@@ -1,4 +1,3 @@
-
 import copy
 import math
 import os
@@ -6,6 +5,7 @@ import re
 from collections import OrderedDict
 from collections import namedtuple
 from random import Random
+from typing import List, Dict, TYPE_CHECKING
 
 import customizer
 from asm import patcher
@@ -16,10 +16,13 @@ from wwlib import texture_utils
 from wwlib.rel import REL
 from wwrando_paths import ASSETS_PATH, ASM_PATH, SEEDGEN_PATH, DATA_PATH
 
+if TYPE_CHECKING:
+    from randomizer import Randomizer
+
 try:
-  from keys.seed_key import SEED_KEY
+    from keys.seed_key import SEED_KEY
 except ImportError:
-  SEED_KEY = ""
+    SEED_KEY = ""
 
 ORIGINAL_FREE_SPACE_RAM_ADDRESS = 0x803FCFA8
 ORIGINAL_DOL_SIZE = 0x3A52C0
@@ -27,2271 +30,2380 @@ ORIGINAL_DOL_SIZE = 0x3A52C0
 MAXIMUM_ADDITIONAL_STARTING_ITEMS = 47
 
 
-def set_new_game_starting_spawn_id(self, spawn_id):
-  self.dol.write_data(write_u8, 0x80058BAF, spawn_id)
+def set_new_game_starting_spawn_id(randomizer: 'Randomizer', spawn_id):
+    randomizer.dol.write_data(write_u8, 0x80058BAF, spawn_id)
 
-def set_new_game_starting_room_index(self, room_index):
-  self.dol.write_data(write_u8, 0x80058BA7, room_index)
 
-def change_ship_starting_island(self, starting_island_room_index):
-  island_dzx = self.get_arc("files/res/Stage/sea/Room%d.arc" % starting_island_room_index).get_file("room.dzr")
-  ship_spawns = island_dzx.entries_by_type("SHIP")
-  island_ship_spawn_0 = next(x for x in ship_spawns if x.ship_id == 0)
-  
-  sea_dzx = self.get_arc("files/res/Stage/sea/Stage.arc").get_file("stage.dzs")
-  sea_actors = sea_dzx.entries_by_type("ACTR")
-  ship_actor = next(x for x in sea_actors if x.name == "Ship")
-  ship_actor.x_pos = island_ship_spawn_0.x_pos
-  ship_actor.y_pos = island_ship_spawn_0.y_pos
-  ship_actor.z_pos = island_ship_spawn_0.z_pos
-  ship_actor.y_rot = island_ship_spawn_0.y_rot
-  ship_actor.save_changes()
+def set_new_game_starting_room_index(randomizer: 'Randomizer', room_index):
+    randomizer.dol.write_data(write_u8, 0x80058BA7, room_index)
 
-def skip_wakeup_intro_and_start_at_dock(self):
-  # When the player starts a new game they usually start at spawn ID 206, which plays the wakeup event and puts the player on Aryll's lookout.
-  # We change the starting spawn ID to 0, which does not play the wakeup event and puts the player on the dock next to the ship.
-  set_new_game_starting_spawn_id(self, 0)
 
-def start_ship_at_outset(self):
-  # Change the King of Red Lion's default position so that he appears on Outset at the start of the game.
-  change_ship_starting_island(self, 44)
-  
-def make_all_text_instant(self):
-  for msg in self.bmg.messages:
-    msg.initial_draw_type = 1 # Instant initial draw type
-    
-    # Get rid of wait commands
-    msg.string = re.sub(
-      r"\\\{1A 07 00 00 07 [0-9a-f]{2} [0-9a-f]{2}\}",
-      "",
-      msg.string, 0, re.IGNORECASE
-    )
-    
-    # Get rid of wait+dismiss commands
-    # Exclude message 7726, for Maggie's Father throwing rupees at you. He only spawns the rupees past a certain frame of his animation, so if you skipped past the text too quickly you wouldn't get any rupees.
-    # Exclude message 2488, for Orca talking to you after you learn the Hurricane Spin. Without the wait+dismiss he would wind up repeating some of his lines once.
-    if msg.message_id != 7726 and msg.message_id != 2488:
-      msg.string = re.sub(
-        r"\\\{1A 07 00 00 04 [0-9a-f]{2} [0-9a-f]{2}\}",
-        "",
-        msg.string, 0, re.IGNORECASE
-      )
-    
-    # Get rid of wait+dismiss (prompt) commands
-    msg.string = re.sub(
-      r"\\\{1A 07 00 00 03 [0-9a-f]{2} [0-9a-f]{2}\}",
-      "",
-      msg.string, 0, re.IGNORECASE
-    )
-  
-  # Also change the B button to act as a hold-to-skip button during dialogue.
-  patcher.apply_patch(self, "b_button_skips_text")
+def change_ship_starting_island(randomizer: 'Randomizer', starting_island_room_index):
+    island_dzx = randomizer.get_arc("files/res/Stage/sea/Room%d.arc" % starting_island_room_index).get_file("room.dzr")
+    ship_spawns = island_dzx.entries_by_type("SHIP")
+    island_ship_spawn_0 = next(x for x in ship_spawns if x.ship_id == 0)
 
-def fix_deku_leaf_model(self):
-  # The Deku Leaf is a unique object not used for other items. It's easy to change what item it gives you, but the visual model cannot be changed.
-  # So instead we replace the unique Deku Leaf actor ("itemDek") with a more general actor that can be for any field item ("item").
-  
-  dzx = self.get_arc("files/res/Stage/Omori/Room0.arc").get_file("room.dzr")
-  deku_leaf_actors = [actor for actor in dzx.entries_by_type("ACTR") if actor.name == "itemDek"]
-  for actor in deku_leaf_actors:
-    actor.name = "item"
-    actor.params = 0x01FF0000 # Misc params, one of which makes the item not fade out over time
-    actor.item_id = 0x34 # Deku Leaf
-    actor.item_pickup_flag = 2 # This is the same item pickup flag that itemDek originally had in its params.
-    actor.activation_switch_index = 0xFF # Necessary for the item to be pickupable.
-    actor.save_changes()
+    sea_dzx = randomizer.get_arc("files/res/Stage/sea/Stage.arc").get_file("stage.dzs")
+    sea_actors = sea_dzx.entries_by_type("ACTR")
+    ship_actor = next(x for x in sea_actors if x.name == "Ship")
+    ship_actor.x_pos = island_ship_spawn_0.x_pos
+    ship_actor.y_pos = island_ship_spawn_0.y_pos
+    ship_actor.z_pos = island_ship_spawn_0.z_pos
+    ship_actor.y_rot = island_ship_spawn_0.y_rot
+    ship_actor.save_changes()
 
-def allow_all_items_to_be_field_items(self):
-  # Most items cannot be field items (items that appear freely floating on the ground) because they don't have a field model defined.
-  # Here we copy the regular item get model to the field model so that any item can be a field item.
-  # We also change the code run when you touch the item so that these items play out the full item get animation with text, instead of merely popping up above the player's head like a rupee.
-  # And we change the Y offsets so the items don't appear lodged inside the floor, and can be picked up easily.
-  # And also change the radius for items that had 0 radius so the player doesn't need to be right inside the item to pick it up.
-  # Also change the code run by items during the wait state, which affects the physics when shot out of Gohdan's nose for example.
-  
-  item_resources_list_start = 0x803842B0
-  field_item_resources_list_start = 0x803866B0
-  itemGetExecute_switch_statement_entries_list_start = 0x8038CA6C
-  mode_wait_switch_statement_entries_list_start = 0x8038CC7C
-  
-  for item_id in self.item_ids_without_a_field_model:
-    if item_id in [0x39, 0x3A, 0x3E]:
-      # Master Swords don't have a proper item get model defined, so we need to use the Hero's Sword instead.
-      item_id_to_copy_from = 0x38
-      # We also change the item get model too, not just the field model.
-      item_resources_addr_to_fix = item_resources_list_start + item_id*0x24
-    elif item_id in [0x6D, 0x6E, 0x6F, 0x70, 0x71, 0x72]:
-      # Songs use the Pirate's Charm model by default, so we change it to use the Wind Waker model instead.
-      item_id_to_copy_from = 0x22
-      # We also change the item get model too, not just the field model.
-      item_resources_addr_to_fix = item_resources_list_start + item_id*0x24
-    elif item_id == 0xB2:
-      # The Magic Meter Upgrade has no model, so we have to copy the Green Potion model.
-      item_id_to_copy_from = 0x52
-      # We also change the item get model too, not just the field model.
-      item_resources_addr_to_fix = item_resources_list_start + item_id*0x24
-    else:
-      item_id_to_copy_from = item_id
-      item_resources_addr_to_fix = None
-    
-    item_resources_addr_to_copy_from = item_resources_list_start + item_id_to_copy_from*0x24
-    field_item_resources_addr = field_item_resources_list_start + item_id*0x1C
-    
-    arc_name_pointer = self.arc_name_pointers[item_id_to_copy_from]
-    
-    if item_id == 0xAA:
-      # Hurricane Spin, switch it to using the custom scroll model instead of the sword model.
-      arc_name_pointer = self.main_custom_symbols["hurricane_spin_item_resource_arc_name"]
-      item_resources_addr_to_fix = item_resources_list_start + item_id*0x24
-    
-    self.dol.write_data(write_u32, field_item_resources_addr, arc_name_pointer)
-    if item_resources_addr_to_fix:
-      self.dol.write_data(write_u32, item_resources_addr_to_fix, arc_name_pointer)
-    
-    data1 = self.dol.read_data(read_bytes, item_resources_addr_to_copy_from+8, 0xD)
-    data2 = self.dol.read_data(read_bytes, item_resources_addr_to_copy_from+0x1C, 4)
-    self.dol.write_data(write_bytes, field_item_resources_addr+4, data1)
-    self.dol.write_data(write_bytes, field_item_resources_addr+0x14, data2)
-    if item_resources_addr_to_fix:
-      self.dol.write_data(write_bytes, item_resources_addr_to_fix+8, data1)
-      self.dol.write_data(write_bytes, item_resources_addr_to_fix+0x1C, data2)
-  
-  # Also nop out the 7 lines of code that initialize the arc filename pointer for the 6 songs and the Hurricane Spin.
-  # These lines would overwrite the changes we made to their arc names.
-  for address in [0x800C1970, 0x800C1978, 0x800C1980, 0x800C1988, 0x800C1990, 0x800C1998, 0x800C1BA8]:
-    self.dol.write_data(write_u32, address, 0x60000000) # nop
-  
-  
-  # Fix which code runs when the player touches the field item to pick the item up.
-  for item_id in range(0, 0x83+1):
-    # Update the switch statement cases in function itemGetExecute for items that originally used the default case (0x800F6C8C).
-    # This default case wouldn't give the player the item. It would just appear above the player's head for a moment like a Rupee and not be added to the player's inventory.
-    # We switch it to case 0x800F675C, which will use the proper item get event with all the animations, text, etc.
-    location_of_items_switch_statement_case = itemGetExecute_switch_statement_entries_list_start + item_id*4
-    original_switch_case = self.dol.read_data(read_u32, location_of_items_switch_statement_case)
-    if original_switch_case == 0x800F6C8C:
-      self.dol.write_data(write_u32, location_of_items_switch_statement_case, 0x800F675C)
-  
-  # Also change the switch case in itemGetExecute used by items with IDs 0x84+ to go to 800F675C as well.
-  self.dol.write_data(write_u32, 0x800F6468, 0x418102F4) # bgt 0x800F675C
-  
-  
-  # Update the visual Y offsets so the item doesn't look like it's halfway inside the floor and difficult to see.
-  # First update the default case of the switch statement in the function getYOffset so that it reads from 803F9E84 (value: 23.0), instead of 803F9E80 (value: 0.0).
-  self.dol.write_data(write_u32, 0x800F4CD0, 0xC022A184) # lfs f1, -0x5E7C(rtoc)
-  # And fix then Big Key so it uses the default case with the 23.0 offset, instead of using the 0.0 offset. (Other items already use the default case, so we don't need to fix any besides Big Key.)
-  self.dol.write_data(write_u32, 0x8038C8B8 + 0x4E*4, 0x800F4CD0)
-  
-  
-  # We also change the Y offset of the hitbox for any items that have 0 for the Y offset.
-  # Without this change the item would be very difficult to pick up, the only way would be to stand on top of it and do a spin attack.
-  # And also change the radius of the hitbox for items that have 0 for the radius.
-  extra_item_data_list_start = 0x803882B0
-  for item_id in range(0, 0xFF+1):
-    item_extra_data_entry_addr = extra_item_data_list_start+4*item_id
-    original_y_offset = self.dol.read_data(read_u8, item_extra_data_entry_addr+1)
-    if original_y_offset == 0:
-      self.dol.write_data(write_u8, item_extra_data_entry_addr+1, 0x28) # Y offset of 0x28
-    original_radius = self.dol.read_data(read_u8, item_extra_data_entry_addr+2)
-    if original_radius == 0:
-      self.dol.write_data(write_u8, item_extra_data_entry_addr+2, 0x28) # Radius of 0x28
-  
-  
-  for item_id in range(0x20, 0x44+1):
-    # Update the switch statement cases in function mode_wait for certain items that originally used the default case (0x800F8190 - leads to calling itemActionForRupee).
-    # This default case caused items to have the physics of rupees, which causes them to shoot out too far from Gohdan's nose.
-    # We switch it to case 0x800F8160 (itemActionForArrow), which is what heart containers and heart pieces use.
-    location_of_items_switch_statement_case = mode_wait_switch_statement_entries_list_start + item_id*4
-    self.dol.write_data(write_u32, location_of_items_switch_statement_case, 0x800F8160)
-  # Also change the switch case used by items with IDs 0x4C+ to go to 800F8160 as well.
-  self.dol.write_data(write_u32, 0x800F8138, 0x41810028) # bgt 0x800F8160
-  
-  
-  # Also add the Vscroll.arc containing the Hurricane Spin's custom model to the GCM's filesystem.
-  vscroll_arc_path = os.path.join(ASSETS_PATH, "Vscroll.arc")
-  with open(vscroll_arc_path, "rb") as f:
-    data = BytesIO(f.read())
-  self.add_new_raw_file("files/res/Object/Vscroll.arc", data)
 
-def remove_shop_item_forced_uniqueness_bit(self):
-  # Some shop items have a bit set that disallows you from buying the item if you already own one of that item.
-  # This can be undesirable depending on what we randomize the items to be, so we unset this bit.
-  # Also, Beedle doesn't have a message to say when you try to buy an item with this bit you already own. So the game would just crash if the player tried to buy these items while already owning them.
-  
-  shop_item_data_list_start = 0x80375E1C
-  
-  for shop_item_index in [0, 0xB, 0xC, 0xD]: # Bait Bag, Empty Bottle, Piece of Heart, and Treasure Chart 4 in Beedle's shops
-    shop_item_data_addr = shop_item_data_list_start + shop_item_index*0x10
-    buy_requirements_bitfield = self.dol.read_data(read_u8, shop_item_data_addr+0xC)
-    buy_requirements_bitfield = (buy_requirements_bitfield & (~2)) # Bit 02 specifies that the player must not already own this item
-    self.dol.write_data(write_u8, shop_item_data_addr+0xC, buy_requirements_bitfield)
+def skip_wakeup_intro_and_start_at_dock(randomizer: 'Randomizer'):
+    # When the player starts a new game they usually start at spawn ID 206, which plays the wakeup event and puts the player on Aryll's lookout.
+    # We change the starting spawn ID to 0, which does not play the wakeup event and puts the player on the dock next to the ship.
+    set_new_game_starting_spawn_id(randomizer, 0)
 
-def remove_forsaken_fortress_2_cutscenes(self):
-  # Removes the rescuing-Aryll cutscene played by the spawn when you enter the Forsaken Fortress tower.
-  dzx = self.get_arc("files/res/Stage/M2tower/Room0.arc").get_file("room.dzr")
-  spawn = next(spawn for spawn in dzx.entries_by_type("PLYR") if spawn.spawn_id == 16)
-  spawn.evnt_index = 0xFF
-  spawn.save_changes()
-  
-  # Removes the Ganon cutscene by making the door to his room lead back to the start of Forsaken Fortress instead.
-  exit = next((exit for exit in dzx.entries_by_type("SCLS") if exit.dest_stage_name == "M2ganon"), None)
-  if exit:
-    exit.dest_stage_name = "sea"
-    exit.room_index = 1
-    exit.spawn_id = 0
-    exit.save_changes()
 
-def make_items_progressive(self):
-  # This makes items progressive, so even if you get them out of order, they will always be upgraded, never downgraded.
-  
-  patcher.apply_patch(self, "make_items_progressive")
-  
-  # Update the item get funcs for the items to point to our custom progressive item get funcs instead.
-  item_get_funcs_list = 0x803888C8
-  
-  for sword_item_id in [0x38, 0x39, 0x3A, 0x3D, 0x3E]:
-    sword_item_get_func_addr = item_get_funcs_list + sword_item_id*4
-    self.dol.write_data(write_u32, sword_item_get_func_addr, self.main_custom_symbols["progressive_sword_item_func"])
-  
-  for shield_item_id in [0x3B, 0x3C]:
-    shield_item_get_func_addr = item_get_funcs_list + shield_item_id*4
-    self.dol.write_data(write_u32, shield_item_get_func_addr, self.main_custom_symbols["progressive_shield_item_func"])
-  
-  for bow_item_id in [0x27, 0x35, 0x36]:
-    bow_item_get_func_addr = item_get_funcs_list + bow_item_id*4
-    self.dol.write_data(write_u32, bow_item_get_func_addr, self.main_custom_symbols["progressive_bow_func"])
-  
-  for wallet_item_id in [0xAB, 0xAC]:
-    wallet_item_get_func_addr = item_get_funcs_list + wallet_item_id*4
-    self.dol.write_data(write_u32, wallet_item_get_func_addr, self.main_custom_symbols["progressive_wallet_item_func"])
-  
-  for bomb_bag_item_id in [0xAD, 0xAE]:
-    bomb_bag_item_get_func_addr = item_get_funcs_list + bomb_bag_item_id*4
-    self.dol.write_data(write_u32, bomb_bag_item_get_func_addr, self.main_custom_symbols["progressive_bomb_bag_item_func"])
-  
-  for quiver_item_id in [0xAF, 0xB0]:
-    quiver_item_get_func_addr = item_get_funcs_list + quiver_item_id*4
-    self.dol.write_data(write_u32, quiver_item_get_func_addr, self.main_custom_symbols["progressive_quiver_item_func"])
-  
-  for picto_box_item_id in [0x23, 0x26]:
-    picto_box_item_get_func_addr = item_get_funcs_list + picto_box_item_id*4
-    self.dol.write_data(write_u32, picto_box_item_get_func_addr, self.main_custom_symbols["progressive_picto_box_item_func"])
-  
-  # Register which item ID is for which progressive item.
-  self.register_renamed_item(0x38, "Progressive Sword")
-  self.register_renamed_item(0x3B, "Progressive Shield")
-  self.register_renamed_item(0x27, "Progressive Bow")
-  self.register_renamed_item(0xAB, "Progressive Wallet")
-  self.register_renamed_item(0xAD, "Progressive Bomb Bag")
-  self.register_renamed_item(0xAF, "Progressive Quiver")
-  self.register_renamed_item(0x23, "Progressive Picto Box")
-  
-  # Modify the item get funcs for bombs and the hero's bow to nop out the code that sets your current and max bombs/arrows to 30.
-  # Without this change, getting bombs after a bomb bag upgrade would negate the bomb bag upgrade.
-  # Note that normally making this change would cause the player to have 0 max bombs/arrows if they get bombs/bow before any bomb bag/quiver upgrades.
-  # But in the new game start code, we set the player's current and max bombs and arrows to 30, so that is no longer an issue.
-  self.dol.write_data(write_u32, 0x800C36C0, 0x60000000) # Don't set current bombs
-  self.dol.write_data(write_u32, 0x800C36C4, 0x60000000) # Don't set max bombs
-  self.dol.write_data(write_u32, 0x800C346C, 0x60000000) # Don't set current arrows
-  self.dol.write_data(write_u32, 0x800C3470, 0x60000000) # Don't set max arrows
-  
-  # Modify the item get func for deku leaf to nop out the part where it adds to your magic meter.
-  # Instead we start the player with a magic meter when they start a new game.
-  # This way other items can use the magic meter before the player gets deku leaf.
-  self.dol.write_data(write_u32, 0x800C375C, 0x60000000) # Don't set max magic meter
-  self.dol.write_data(write_u32, 0x800C3768, 0x60000000) # Don't set current magic meter
+def start_ship_at_outset(randomizer: 'Randomizer'):
+    # Change the King of Red Lion's default position so that he appears on Outset at the start of the game.
+    change_ship_starting_island(randomizer, 44)
 
-def make_sail_behave_like_swift_sail(self):
-  # Causes the wind direction to always change to face the direction KoRL is facing as long as the sail is out.
-  # Also doubles KoRL's speed.
-  # And changes the textures to match the swift sail from HD.
-  
-  # Apply the asm patch.
-  patcher.apply_patch(self, "swift_sail")
-  
-  # Update the pause menu name for the sail.
-  msg = self.bmg.messages_by_id[463]
-  msg.string = "Swift Sail"
-  
-  new_sail_tex_image_path = os.path.join(ASSETS_PATH, "swift sail texture.png")
-  new_sail_icon_image_path = os.path.join(ASSETS_PATH, "swift sail icon.png")
-  new_sail_itemget_tex_image_path = os.path.join(ASSETS_PATH, "swift sail item get texture.png")
-  
-  if not self.using_custom_sail_texture:
-    # Modify the sail's texture while sailing (only if the custom player model didn't already change the sail texture).
-    ship_arc = self.get_arc("files/res/Object/Ship.arc")
-    sail_image = ship_arc.get_file("new_ho1.bti")
-    sail_image.replace_image_from_path(new_sail_tex_image_path)
-    sail_image.save_changes()
-  
-  # Modify the sail's item icon.
-  itemicon_arc = self.get_arc("files/res/Msg/itemicon.arc")
-  sail_icon_image = itemicon_arc.get_file("sail_00.bti")
-  sail_icon_image.replace_image_from_path(new_sail_icon_image_path)
-  sail_icon_image.save_changes()
-  
-  # Modify the sail's item get texture.
-  sail_itemget_arc = self.get_arc("files/res/Object/Vho.arc")
-  sail_itemget_model = sail_itemget_arc.get_file("vho.bdl")
-  sail_itemget_tex_image = sail_itemget_model.tex1.textures_by_name["Vho"][0]
-  sail_itemget_tex_image.replace_image_from_path(new_sail_itemget_tex_image_path)
-  sail_itemget_model.save_changes()
 
-def add_ganons_tower_warp_to_ff2(self):
-  # Normally the warp object from Forsaken Fortress down to Ganon's Tower only appears in FF3.
-  # But we changed Forsaken Fortress to remain permanently as FF2.
-  # So we need to add the warp object to FF2 as well so the player can conveniently go between the sea and Ganon's Tower.
-  # To do this we copy the warp entity from layer 2 onto layer 1.
-  
-  dzx = self.get_arc("files/res/Stage/sea/Room1.arc").get_file("room.dzr")
-  
-  layer_2_actors = dzx.entries_by_type_and_layer("ACTR", 2)
-  layer_2_warp = next(x for x in layer_2_actors if x.name == "Warpmj")
-  
-  layer_1_warp = dzx.add_entity("ACTR", layer=1)
-  layer_1_warp.name = layer_2_warp.name
-  layer_1_warp.params = layer_2_warp.params
-  layer_1_warp.x_pos = layer_2_warp.x_pos
-  layer_1_warp.y_pos = layer_2_warp.y_pos
-  layer_1_warp.z_pos = layer_2_warp.z_pos
-  layer_1_warp.x_rot = layer_2_warp.x_rot
-  layer_1_warp.y_rot = layer_2_warp.y_rot
-  layer_1_warp.z_rot = layer_2_warp.z_rot
-  layer_1_warp.enemy_number = layer_2_warp.enemy_number
-  
-  dzx.save_changes()
+def make_all_text_instant(randomizer: 'Randomizer'):
+    for msg in randomizer.bmg.messages:
+        msg.initial_draw_type = 1  # Instant initial draw type
 
-def add_chest_in_place_medli_grappling_hook_gift(self):
-  # Add a chest in place of Medli locked in the jail cell at the peak of Dragon Roost Cavern.
-  
-  dzs = self.get_arc("files/res/Stage/M_Dra09/Stage.arc").get_file("stage.dzs")
-  
-  chest_in_jail = dzs.add_entity("TRES", layer=None)
-  chest_in_jail.name = "takara3"
-  chest_in_jail.params = 0xFF000000
-  chest_in_jail.switch_to_set = 0xFF
-  chest_in_jail.chest_type = 2
-  chest_in_jail.opened_flag = 0x11
-  chest_in_jail.x_pos = -1620.81
-  chest_in_jail.y_pos = 13600
-  chest_in_jail.z_pos = 263.034
-  chest_in_jail.room_num = 9
-  chest_in_jail.y_rot = 0xCC16
-  chest_in_jail.item_id = self.item_name_to_id["Grappling Hook"]
-  
-  dzs.save_changes()
-  
-  dzs = self.get_arc("files/res/Stage/M_NewD2/Stage.arc").get_file("stage.dzs")
-  
-  dummy_chest = dzs.add_entity("TRES", layer=None)
-  dummy_chest.name = chest_in_jail.name
-  dummy_chest.params = chest_in_jail.params
-  dummy_chest.switch_to_set = chest_in_jail.switch_to_set
-  dummy_chest.chest_type = chest_in_jail.chest_type
-  dummy_chest.opened_flag = chest_in_jail.opened_flag
-  dummy_chest.x_pos = chest_in_jail.x_pos
-  dummy_chest.y_pos = chest_in_jail.y_pos
-  dummy_chest.z_pos = chest_in_jail.z_pos
-  dummy_chest.room_num = chest_in_jail.room_num
-  dummy_chest.y_rot = chest_in_jail.y_rot
-  dummy_chest.item_id = 0xFF
-  
-  dzs.save_changes()
+        # Get rid of wait commands
+        msg.string = re.sub(
+            r"\\\{1A 07 00 00 07 [0-9a-f]{2} [0-9a-f]{2}\}",
+            "",
+            msg.string, 0, re.IGNORECASE
+        )
 
-def add_chest_in_place_queen_fairy_cutscene(self):
-  # Add a chest in place of the Queen Fairy cutscene inside Mother Isle.
-  
-  dzx = self.get_arc("files/res/Stage/sea/Room9.arc").get_file("room.dzr")
-  
-  mother_island_chest = dzx.add_entity("TRES", layer=None)
-  mother_island_chest.name = "takara3"
-  mother_island_chest.params = 0xFF000000
-  mother_island_chest.switch_to_set = 0xFF
-  mother_island_chest.chest_type = 2
-  mother_island_chest.opened_flag = 0x1C
-  mother_island_chest.x_pos = -180031
-  mother_island_chest.y_pos = 723
-  mother_island_chest.z_pos = -199995
-  mother_island_chest.room_num = 9
-  mother_island_chest.y_rot = 0x1000
-  mother_island_chest.item_id = self.item_name_to_id["Progressive Bow"]
-  
-  dzx.save_changes()
+        # Get rid of wait+dismiss commands
+        # Exclude message 7726, for Maggie's Father throwing rupees at you. He only spawns the rupees past a certain frame of his animation, so if you skipped past the text too quickly you wouldn't get any rupees.
+        # Exclude message 2488, for Orca talking to you after you learn the Hurricane Spin. Without the wait+dismiss he would wind up repeating some of his lines once.
+        if msg.message_id != 7726 and msg.message_id != 2488:
+            msg.string = re.sub(
+                r"\\\{1A 07 00 00 04 [0-9a-f]{2} [0-9a-f]{2}\}",
+                "",
+                msg.string, 0, re.IGNORECASE
+            )
 
-def add_cube_to_earth_temple_first_room(self):
-  # If the player enters Earth Temple, uses Medli to cross the gap, brings Medli into the next room, then leaves Earth Temple, Medli will no longer be in the first room.
-  # This can softlock the player if they don't have Deku Leaf to get across the gap in that first room.
-  # So we add a cube to that first room so the player can just climb up.
-  
-  dzx = self.get_arc("files/res/Stage/M_Dai/Room0.arc").get_file("room.dzr")
-  
-  cube = dzx.add_entity("ACTR", layer=None)
-  cube.name = "Ecube"
-  cube.params = 0x8C00FF00
-  cube.x_pos = -6986.07
-  cube.y_pos = -600
-  cube.z_pos = 4077.37
-  
-  dzx.save_changes()
+        # Get rid of wait+dismiss (prompt) commands
+        msg.string = re.sub(
+            r"\\\{1A 07 00 00 03 [0-9a-f]{2} [0-9a-f]{2}\}",
+            "",
+            msg.string, 0, re.IGNORECASE
+        )
 
-def add_more_magic_jars(self):
-  # Add more magic jar drops to locations where it can be very inconvenient to not have them.
-  
-  # Dragon Roost Cavern doesn't have any magic jars in it since you normally wouldn't have Deku Leaf for it.
-  # But since using Deku Leaf in DRC can be required by the randomizer, it can be annoying to not have any way to refill MP.
-  # We change several skulls that originally dropped nothing when destroyed to drop magic jars instead.
-  drc_center_room = self.get_arc("files/res/Stage/M_NewD2/Room2.arc").get_file("room.dzr")
-  actors = drc_center_room.entries_by_type("ACTR")
-  skulls = [actor for actor in actors if actor.name == "Odokuro"]
-  skulls[2].item_id = self.item_name_to_id["Small Magic Jar (Pickup)"]
-  skulls[2].save_changes()
-  skulls[5].item_id = self.item_name_to_id["Large Magic Jar (Pickup)"]
-  skulls[5].save_changes()
-  drc_before_boss_room = self.get_arc("files/res/Stage/M_NewD2/Room10.arc").get_file("room.dzr")
-  actors = drc_before_boss_room.entries_by_type("ACTR")
-  skulls = [actor for actor in actors if actor.name == "Odokuro"]
-  skulls[0].item_id = self.item_name_to_id["Large Magic Jar (Pickup)"]
-  skulls[0].save_changes()
-  skulls[9].item_id = self.item_name_to_id["Large Magic Jar (Pickup)"]
-  skulls[9].save_changes()
-  
-  # The grass on the small elevated islands around DRI have a lot of grass that can drop magic, but it's not guaranteed.
-  # Add a new piece of grass to each of the 2 small islands that are guaranteed to drop magic.
-  dri = self.get_arc("files/res/Stage/sea/Room13.arc").get_file("room.dzr")
-  grass1 = dri.add_entity("ACTR", layer=None)
-  grass1.name = "kusax1"
-  grass1.grass_type = 0
-  grass1.grass_subtype = 0
-  grass1.grass_item_drop_type = 0x38 # 62.50% chance of small magic, 37.50% chance of large magic
-  grass1.x_pos = 209694
-  grass1.y_pos = 1900
-  grass1.z_pos = -202463
-  grass2 = dri.add_entity("ACTR", layer=None)
-  grass2.name = "kusax1"
-  grass2.grass_type = 0
-  grass2.grass_subtype = 0
-  grass2.grass_item_drop_type = 0x38 # 62.50% chance of small magic, 37.50% chance of large magic
-  grass2.x_pos = 209333
-  grass2.y_pos = 1300
-  grass2.z_pos = -210145
-  dri.save_changes()
-  
-  # Make one of the pots next to the entrance to the TotG miniboss always drop large magic.
-  totg_before_miniboss_room = self.get_arc("files/res/Stage/Siren/Room14.arc").get_file("room.dzr")
-  actors = totg_before_miniboss_room.entries_by_type("ACTR")
-  pots = [actor for actor in actors if actor.name == "kotubo"]
-  pots[1].item_id = self.item_name_to_id["Large Magic Jar (Pickup)"]
-  pots[1].save_changes()
+    # Also change the B button to act as a hold-to-skip button during dialogue.
+    patcher.apply_patch(randomizer, "b_button_skips_text")
 
-def remove_title_and_ending_videos(self):
-  # Remove the huge video files that play during the ending and if you sit on the title screen a while.
-  # We replace them with a very small blank video file to save space.
-  
-  blank_video_path = os.path.join(ASSETS_PATH, "blank.thp")
-  with open(blank_video_path, "rb") as f:
-    new_data = BytesIO(f.read())
-  self.replace_raw_file("files/thpdemo/title_loop.thp", new_data)
-  self.replace_raw_file("files/thpdemo/end_st_epilogue.thp", new_data)
 
-def modify_title_screen_logo(self):
-  new_title_image_path = os.path.join(ASSETS_PATH, "title.png")
-  new_subtitle_image_path = os.path.join(ASSETS_PATH, "subtitle.png")
-  tlogoe_arc = self.get_arc("files/res/Object/TlogoE.arc")
-  
-  title_image = tlogoe_arc.get_file("logo_zelda_main.bti")
-  title_image.replace_image_from_path(new_title_image_path)
-  title_image.save_changes()
-  
-  subtitle_model = tlogoe_arc.get_file("subtitle_start_anim_e.bdl")
-  subtitle_image = subtitle_model.tex1.textures_by_name["logo_sub_e"][0]
-  subtitle_image.replace_image_from_path(new_subtitle_image_path)
-  subtitle_model.save_changes()
-  
-  subtitle_glare_model = tlogoe_arc.get_file("subtitle_kirari_e.bdl")
-  subtitle_glare_image = subtitle_glare_model.tex1.textures_by_name["logo_sub_e"][0]
-  subtitle_glare_image.replace_image_from_path(new_subtitle_image_path)
-  subtitle_glare_model.save_changes()
-  
-  # Move where the subtitle is drawn downwards a bit so the word "the" doesn't get covered up by the main logo.
-  title_rel = self.get_rel("files/rels/d_a_title.rel")
-  y_pos = title_rel.read_data(read_float, 0x1F44)
-  y_pos -= 13.0
-  title_rel.write_data(write_float, 0x1F44, y_pos)
-  
-  # Move the sparkle particle effect down a bit to fit the taller logo better.
-  # (This has the side effect of also moving down the clouds below the ship, but this is not noticeable.)
-  data = tlogoe_arc.get_file_entry("title_logo_e.blo").data
-  write_u16(data, 0x162, 0x106) # Increase Y pos by 16 pixels (0xF6 -> 0x106)
+def fix_deku_leaf_model(randomizer: 'Randomizer'):
+    # The Deku Leaf is a unique object not used for other items. It's easy to change what item it gives you, but the visual model cannot be changed.
+    # So instead we replace the unique Deku Leaf actor ("itemDek") with a more general actor that can be for any field item ("item").
 
-def update_game_name_icon_and_banners(self):
-  new_game_name = "Wind Waker Randomized %s" % self.seed
-  banner_data = self.get_raw_file("files/opening.bnr")
-  write_magic_str(banner_data, 0x1860, new_game_name, 0x40)
-  
-  new_game_id = "GZLE99"
-  boot_data = self.get_raw_file("sys/boot.bin")
-  write_magic_str(boot_data, 0, new_game_id, 6)
-  
-  new_memory_card_game_name = "Wind Waker Randomizer"
-  self.dol.write_data(write_magic_str, 0x80339690, new_memory_card_game_name, 21)
-  
-  new_image_file_path = os.path.join(ASSETS_PATH, "banner.png")
-  image_format = texture_utils.ImageFormat.RGB5A3
-  palette_format = texture_utils.PaletteFormat.RGB5A3
-  image_data, _, _, image_width, image_height = texture_utils.encode_image_from_path(new_image_file_path, image_format, palette_format)
-  assert image_width == 96
-  assert image_height == 32
-  assert data_len(image_data) == 0x1800
-  image_data.seek(0)
-  write_bytes(banner_data, 0x20, image_data.read())
-  
-  cardicon_arc = self.get_arc("files/res/CardIcon/cardicon.arc")
-  
-  memory_card_icon_file_path = os.path.join(ASSETS_PATH, "memory card icon.png")
-  memory_card_icon = cardicon_arc.get_file("ipl_icon1.bti")
-  memory_card_icon.replace_image_from_path(memory_card_icon_file_path)
-  memory_card_icon.save_changes()
-  
-  memory_card_banner_file_path = os.path.join(ASSETS_PATH, "memory card banner.png")
-  memory_card_banner = cardicon_arc.get_file("ipl_banner.bti")
-  memory_card_banner.replace_image_from_path(memory_card_banner_file_path)
-  memory_card_banner.save_changes()
+    dzx = randomizer.get_arc("files/res/Stage/Omori/Room0.arc").get_file("room.dzr")
+    deku_leaf_actors = [actor for actor in dzx.entries_by_type("ACTR") if actor.name == "itemDek"]
+    for actor in deku_leaf_actors:
+        actor.name = "item"
+        actor.params = 0x01FF0000  # Misc params, one of which makes the item not fade out over time
+        actor.item_id = 0x34  # Deku Leaf
+        actor.item_pickup_flag = 2  # This is the same item pickup flag that itemDek originally had in its params.
+        actor.activation_switch_index = 0xFF  # Necessary for the item to be pickupable.
+        actor.save_changes()
 
-def allow_dungeon_items_to_appear_anywhere(self):
-  item_get_funcs_list = 0x803888C8
-  item_resources_list_start = 0x803842B0
-  field_item_resources_list_start = 0x803866B0
-  
-  dungeon_items = [
-    ("DRC", "Small Key", 0x13),
-    ("DRC", "Big Key", 0x14),
-    ("DRC", "Dungeon Map", 0x1B),
-    ("DRC", "Compass", 0x1C),
-    ("FW", "Small Key", 0x1D),
-    ("FW", "Big Key", 0x40),
-    ("FW", "Dungeon Map", 0x41),
-    ("FW", "Compass", 0x5A),
-    ("TotG", "Small Key", 0x5B),
-    ("TotG", "Big Key", 0x5C),
-    ("TotG", "Dungeon Map", 0x5D),
-    ("TotG", "Compass", 0x5E),
-    ("FF", "Dungeon Map", 0x5F),
-    ("FF", "Compass", 0x60),
-    ("ET", "Small Key", 0x73),
-    ("ET", "Big Key", 0x74),
-    ("ET", "Dungeon Map", 0x75),
-    ("ET", "Compass", 0x76),
-    ("WT", "Small Key", 0x77),
-    ("WT", "Big Key", 0x81),
-    ("WT", "Dungeon Map", 0x84),
-    ("WT", "Compass", 0x85),
-  ]
-  
-  for short_dungeon_name, base_item_name, item_id in dungeon_items:
-    item_name = short_dungeon_name + " " + base_item_name
-    base_item_id = self.item_name_to_id[base_item_name]
-    dungeon_name = DUNGEON_NAME_DICT[short_dungeon_name]
-    
-    # Register the proper item ID for this item with the randomizer.
-    self.register_renamed_item(item_id, item_name)
-    
-    # Update the item get funcs for the dungeon items to point to our custom item get funcs instead.
-    custom_symbol_name = item_name.lower().replace(" ", "_") + "_item_get_func"
-    item_get_func_addr = item_get_funcs_list + item_id*4
-    self.dol.write_data(write_u32, item_get_func_addr, self.main_custom_symbols[custom_symbol_name])
-    
-    # Add item get messages for the items.
-    if base_item_name == "Small Key":
-      description_format_string = "\\{1A 05 00 00 01}You got %s \\{1A 06 FF 00 00 01}%s small key\\{1A 06 FF 00 00 00}!"
-      description = word_wrap_string(description_format_string % (get_indefinite_article(dungeon_name), dungeon_name))
-    elif base_item_name == "Big Key":
-      description_format_string = "\\{1A 05 00 00 01}You got the \\{1A 06 FF 00 00 01}%s Big Key\\{1A 06 FF 00 00 00}!"
-      description = word_wrap_string(description_format_string % dungeon_name)
-    elif base_item_name == "Dungeon Map":
-      description_format_string = "\\{1A 05 00 00 01}You got the \\{1A 06 FF 00 00 01}%s Dungeon Map\\{1A 06 FF 00 00 00}!"
-      description = word_wrap_string(description_format_string % dungeon_name)
-    elif base_item_name == "Compass":
-      description_format_string = "\\{1A 05 00 00 01}You got the \\{1A 06 FF 00 00 01}%s Compass\\{1A 06 FF 00 00 00}!"
-      description = word_wrap_string(description_format_string % dungeon_name)
-    
-    msg = self.bmg.add_new_message(101 + item_id)
-    msg.string = description
-    msg.text_box_type = 9 # Item get message box
-    msg.initial_draw_type = 2 # Slow initial message speed
-    msg.display_item_id = item_id
-    
-    # Update item resources and field item resources so the models/icons show correctly for these items.
-    item_resources_addr_to_copy_from = item_resources_list_start + base_item_id*0x24
-    field_item_resources_addr_to_copy_from = field_item_resources_list_start + base_item_id*0x24
-    item_resources_addr = item_resources_list_start + item_id*0x24
-    field_item_resources_addr = field_item_resources_list_start + item_id*0x1C
-    
-    arc_name_pointer = self.arc_name_pointers[base_item_id]
-    
-    self.dol.write_data(write_u32, field_item_resources_addr, arc_name_pointer)
-    self.dol.write_data(write_u32, item_resources_addr, arc_name_pointer)
-    
-    item_icon_filename_pointer = self.icon_name_pointer[base_item_id]
-    self.dol.write_data(write_u32, item_resources_addr+4, item_icon_filename_pointer)
-    
-    data1 = self.dol.read_data(read_bytes, item_resources_addr_to_copy_from+8, 0xD)
-    self.dol.write_data(write_bytes, item_resources_addr+8, data1)
-    self.dol.write_data(write_bytes, field_item_resources_addr+4, data1)
-    data2 = self.dol.read_data(read_bytes, item_resources_addr_to_copy_from+0x1C, 4)
-    self.dol.write_data(write_bytes, item_resources_addr+0x1C, data2)
-    self.dol.write_data(write_bytes, field_item_resources_addr+0x14, data2)
-    
-    data3 = self.dol.read_data(read_bytes, item_resources_addr_to_copy_from+0x15, 7)
-    self.dol.write_data(write_bytes, item_resources_addr+0x15, data3)
-    data4 = self.dol.read_data(read_bytes, item_resources_addr_to_copy_from+0x20, 4)
-    self.dol.write_data(write_bytes, item_resources_addr+0x20, data4)
-    
-    data5 = self.dol.read_data(read_bytes, field_item_resources_addr_to_copy_from+0x11, 3)
-    self.dol.write_data(write_bytes, field_item_resources_addr+0x11, data5)
-    data6 = self.dol.read_data(read_bytes, field_item_resources_addr_to_copy_from+0x18, 4)
-    self.dol.write_data(write_bytes, field_item_resources_addr+0x18, data6)
+
+def allow_all_items_to_be_field_items(randomizer: 'Randomizer'):
+    # Most items cannot be field items (items that appear freely floating on the ground) because they don't have a field model defined.
+    # Here we copy the regular item get model to the field model so that any item can be a field item.
+    # We also change the code run when you touch the item so that these items play out the full item get animation with text, instead of merely popping up above the player's head like a rupee.
+    # And we change the Y offsets so the items don't appear lodged inside the floor, and can be picked up easily.
+    # And also change the radius for items that had 0 radius so the player doesn't need to be right inside the item to pick it up.
+    # Also change the code run by items during the wait state, which affects the physics when shot out of Gohdan's nose for example.
+
+    item_resources_list_start = 0x803842B0
+    field_item_resources_list_start = 0x803866B0
+    itemGetExecute_switch_statement_entries_list_start = 0x8038CA6C
+    mode_wait_switch_statement_entries_list_start = 0x8038CC7C
+
+    for item_id in randomizer.item_ids_without_a_field_model:
+        if item_id in [0x39, 0x3A, 0x3E]:
+            # Master Swords don't have a proper item get model defined, so we need to use the Hero's Sword instead.
+            item_id_to_copy_from = 0x38
+            # We also change the item get model too, not just the field model.
+            item_resources_addr_to_fix = item_resources_list_start + item_id * 0x24
+        elif item_id in [0x6D, 0x6E, 0x6F, 0x70, 0x71, 0x72]:
+            # Songs use the Pirate's Charm model by default, so we change it to use the Wind Waker model instead.
+            item_id_to_copy_from = 0x22
+            # We also change the item get model too, not just the field model.
+            item_resources_addr_to_fix = item_resources_list_start + item_id * 0x24
+        elif item_id == 0xB2:
+            # The Magic Meter Upgrade has no model, so we have to copy the Green Potion model.
+            item_id_to_copy_from = 0x52
+            # We also change the item get model too, not just the field model.
+            item_resources_addr_to_fix = item_resources_list_start + item_id * 0x24
+        else:
+            item_id_to_copy_from = item_id
+            item_resources_addr_to_fix = None
+
+        item_resources_addr_to_copy_from = item_resources_list_start + item_id_to_copy_from * 0x24
+        field_item_resources_addr = field_item_resources_list_start + item_id * 0x1C
+
+        arc_name_pointer = randomizer.arc_name_pointers[item_id_to_copy_from]
+
+        if item_id == 0xAA:
+            # Hurricane Spin, switch it to using the custom scroll model instead of the sword model.
+            arc_name_pointer = randomizer.main_custom_symbols["hurricane_spin_item_resource_arc_name"]
+            item_resources_addr_to_fix = item_resources_list_start + item_id * 0x24
+
+        randomizer.dol.write_data(write_u32, field_item_resources_addr, arc_name_pointer)
+        if item_resources_addr_to_fix:
+            randomizer.dol.write_data(write_u32, item_resources_addr_to_fix, arc_name_pointer)
+
+        data1 = randomizer.dol.read_data(read_bytes, item_resources_addr_to_copy_from + 8, 0xD)
+        data2 = randomizer.dol.read_data(read_bytes, item_resources_addr_to_copy_from + 0x1C, 4)
+        randomizer.dol.write_data(write_bytes, field_item_resources_addr + 4, data1)
+        randomizer.dol.write_data(write_bytes, field_item_resources_addr + 0x14, data2)
+        if item_resources_addr_to_fix:
+            randomizer.dol.write_data(write_bytes, item_resources_addr_to_fix + 8, data1)
+            randomizer.dol.write_data(write_bytes, item_resources_addr_to_fix + 0x1C, data2)
+
+    # Also nop out the 7 lines of code that initialize the arc filename pointer for the 6 songs and the Hurricane Spin.
+    # These lines would overwrite the changes we made to their arc names.
+    for address in [0x800C1970, 0x800C1978, 0x800C1980, 0x800C1988, 0x800C1990, 0x800C1998, 0x800C1BA8]:
+        randomizer.dol.write_data(write_u32, address, 0x60000000)  # nop
+
+    # Fix which code runs when the player touches the field item to pick the item up.
+    for item_id in range(0, 0x83 + 1):
+        # Update the switch statement cases in function itemGetExecute for items that originally used the default case (0x800F6C8C).
+        # This default case wouldn't give the player the item. It would just appear above the player's head for a moment like a Rupee and not be added to the player's inventory.
+        # We switch it to case 0x800F675C, which will use the proper item get event with all the animations, text, etc.
+        location_of_items_switch_statement_case = itemGetExecute_switch_statement_entries_list_start + item_id * 4
+        original_switch_case = randomizer.dol.read_data(read_u32, location_of_items_switch_statement_case)
+        if original_switch_case == 0x800F6C8C:
+            randomizer.dol.write_data(write_u32, location_of_items_switch_statement_case, 0x800F675C)
+
+    # Also change the switch case in itemGetExecute used by items with IDs 0x84+ to go to 800F675C as well.
+    randomizer.dol.write_data(write_u32, 0x800F6468, 0x418102F4)  # bgt 0x800F675C
+
+    # Update the visual Y offsets so the item doesn't look like it's halfway inside the floor and difficult to see.
+    # First update the default case of the switch statement in the function getYOffset so that it reads from 803F9E84 (value: 23.0), instead of 803F9E80 (value: 0.0).
+    randomizer.dol.write_data(write_u32, 0x800F4CD0, 0xC022A184)  # lfs f1, -0x5E7C(rtoc)
+    # And fix then Big Key so it uses the default case with the 23.0 offset, instead of using the 0.0 offset. (Other items already use the default case, so we don't need to fix any besides Big Key.)
+    randomizer.dol.write_data(write_u32, 0x8038C8B8 + 0x4E * 4, 0x800F4CD0)
+
+    # We also change the Y offset of the hitbox for any items that have 0 for the Y offset.
+    # Without this change the item would be very difficult to pick up, the only way would be to stand on top of it and do a spin attack.
+    # And also change the radius of the hitbox for items that have 0 for the radius.
+    extra_item_data_list_start = 0x803882B0
+    for item_id in range(0, 0xFF + 1):
+        item_extra_data_entry_addr = extra_item_data_list_start + 4 * item_id
+        original_y_offset = randomizer.dol.read_data(read_u8, item_extra_data_entry_addr + 1)
+        if original_y_offset == 0:
+            randomizer.dol.write_data(write_u8, item_extra_data_entry_addr + 1, 0x28)  # Y offset of 0x28
+        original_radius = randomizer.dol.read_data(read_u8, item_extra_data_entry_addr + 2)
+        if original_radius == 0:
+            randomizer.dol.write_data(write_u8, item_extra_data_entry_addr + 2, 0x28)  # Radius of 0x28
+
+    for item_id in range(0x20, 0x44 + 1):
+        # Update the switch statement cases in function mode_wait for certain items that originally used the default case (0x800F8190 - leads to calling itemActionForRupee).
+        # This default case caused items to have the physics of rupees, which causes them to shoot out too far from Gohdan's nose.
+        # We switch it to case 0x800F8160 (itemActionForArrow), which is what heart containers and heart pieces use.
+        location_of_items_switch_statement_case = mode_wait_switch_statement_entries_list_start + item_id * 4
+        randomizer.dol.write_data(write_u32, location_of_items_switch_statement_case, 0x800F8160)
+    # Also change the switch case used by items with IDs 0x4C+ to go to 800F8160 as well.
+    randomizer.dol.write_data(write_u32, 0x800F8138, 0x41810028)  # bgt 0x800F8160
+
+    # Also add the Vscroll.arc containing the Hurricane Spin's custom model to the GCM's filesystem.
+    vscroll_arc_path = os.path.join(ASSETS_PATH, "Vscroll.arc")
+    with open(vscroll_arc_path, "rb") as f:
+        data = BytesIO(f.read())
+    randomizer.add_new_raw_file("files/res/Object/Vscroll.arc", data)
+
+
+def remove_shop_item_forced_uniqueness_bit(randomizer: 'Randomizer'):
+    # Some shop items have a bit set that disallows you from buying the item if you already own one of that item.
+    # This can be undesirable depending on what we randomize the items to be, so we unset this bit.
+    # Also, Beedle doesn't have a message to say when you try to buy an item with this bit you already own. So the game would just crash if the player tried to buy these items while already owning them.
+
+    shop_item_data_list_start = 0x80375E1C
+
+    for shop_item_index in [0, 0xB, 0xC,
+                            0xD]:  # Bait Bag, Empty Bottle, Piece of Heart, and Treasure Chart 4 in Beedle's shops
+        shop_item_data_addr = shop_item_data_list_start + shop_item_index * 0x10
+        buy_requirements_bitfield = randomizer.dol.read_data(read_u8, shop_item_data_addr + 0xC)
+        buy_requirements_bitfield = (
+                    buy_requirements_bitfield & (~2))  # Bit 02 specifies that the player must not already own this item
+        randomizer.dol.write_data(write_u8, shop_item_data_addr + 0xC, buy_requirements_bitfield)
+
+
+def remove_forsaken_fortress_2_cutscenes(randomizer: 'Randomizer'):
+    # Removes the rescuing-Aryll cutscene played by the spawn when you enter the Forsaken Fortress tower.
+    dzx = randomizer.get_arc("files/res/Stage/M2tower/Room0.arc").get_file("room.dzr")
+    spawn = next(spawn for spawn in dzx.entries_by_type("PLYR") if spawn.spawn_id == 16)
+    spawn.evnt_index = 0xFF
+    spawn.save_changes()
+
+    # Removes the Ganon cutscene by making the door to his room lead back to the start of Forsaken Fortress instead.
+    exit = next((exit for exit in dzx.entries_by_type("SCLS") if exit.dest_stage_name == "M2ganon"), None)
+    if exit:
+        exit.dest_stage_name = "sea"
+        exit.room_index = 1
+        exit.spawn_id = 0
+        exit.save_changes()
+
+
+def make_items_progressive(randomizer: 'Randomizer'):
+    # This makes items progressive, so even if you get them out of order, they will always be upgraded, never downgraded.
+
+    patcher.apply_patch(randomizer, "make_items_progressive")
+
+    # Update the item get funcs for the items to point to our custom progressive item get funcs instead.
+    item_get_funcs_list = 0x803888C8
+
+    for sword_item_id in [0x38, 0x39, 0x3A, 0x3D, 0x3E]:
+        sword_item_get_func_addr = item_get_funcs_list + sword_item_id * 4
+        randomizer.dol.write_data(write_u32, sword_item_get_func_addr,
+                                  randomizer.main_custom_symbols["progressive_sword_item_func"])
+
+    for shield_item_id in [0x3B, 0x3C]:
+        shield_item_get_func_addr = item_get_funcs_list + shield_item_id * 4
+        randomizer.dol.write_data(write_u32, shield_item_get_func_addr,
+                                  randomizer.main_custom_symbols["progressive_shield_item_func"])
+
+    for bow_item_id in [0x27, 0x35, 0x36]:
+        bow_item_get_func_addr = item_get_funcs_list + bow_item_id * 4
+        randomizer.dol.write_data(write_u32, bow_item_get_func_addr, randomizer.main_custom_symbols["progressive_bow_func"])
+
+    for wallet_item_id in [0xAB, 0xAC]:
+        wallet_item_get_func_addr = item_get_funcs_list + wallet_item_id * 4
+        randomizer.dol.write_data(write_u32, wallet_item_get_func_addr,
+                                  randomizer.main_custom_symbols["progressive_wallet_item_func"])
+
+    for bomb_bag_item_id in [0xAD, 0xAE]:
+        bomb_bag_item_get_func_addr = item_get_funcs_list + bomb_bag_item_id * 4
+        randomizer.dol.write_data(write_u32, bomb_bag_item_get_func_addr,
+                                  randomizer.main_custom_symbols["progressive_bomb_bag_item_func"])
+
+    for quiver_item_id in [0xAF, 0xB0]:
+        quiver_item_get_func_addr = item_get_funcs_list + quiver_item_id * 4
+        randomizer.dol.write_data(write_u32, quiver_item_get_func_addr,
+                                  randomizer.main_custom_symbols["progressive_quiver_item_func"])
+
+    for picto_box_item_id in [0x23, 0x26]:
+        picto_box_item_get_func_addr = item_get_funcs_list + picto_box_item_id * 4
+        randomizer.dol.write_data(write_u32, picto_box_item_get_func_addr,
+                                  randomizer.main_custom_symbols["progressive_picto_box_item_func"])
+
+    # Register which item ID is for which progressive item.
+    randomizer.register_renamed_item(0x38, "Progressive Sword")
+    randomizer.register_renamed_item(0x3B, "Progressive Shield")
+    randomizer.register_renamed_item(0x27, "Progressive Bow")
+    randomizer.register_renamed_item(0xAB, "Progressive Wallet")
+    randomizer.register_renamed_item(0xAD, "Progressive Bomb Bag")
+    randomizer.register_renamed_item(0xAF, "Progressive Quiver")
+    randomizer.register_renamed_item(0x23, "Progressive Picto Box")
+
+    # Modify the item get funcs for bombs and the hero's bow to nop out the code that sets your current and max bombs/arrows to 30.
+    # Without this change, getting bombs after a bomb bag upgrade would negate the bomb bag upgrade.
+    # Note that normally making this change would cause the player to have 0 max bombs/arrows if they get bombs/bow before any bomb bag/quiver upgrades.
+    # But in the new game start code, we set the player's current and max bombs and arrows to 30, so that is no longer an issue.
+    randomizer.dol.write_data(write_u32, 0x800C36C0, 0x60000000)  # Don't set current bombs
+    randomizer.dol.write_data(write_u32, 0x800C36C4, 0x60000000)  # Don't set max bombs
+    randomizer.dol.write_data(write_u32, 0x800C346C, 0x60000000)  # Don't set current arrows
+    randomizer.dol.write_data(write_u32, 0x800C3470, 0x60000000)  # Don't set max arrows
+
+    # Modify the item get func for deku leaf to nop out the part where it adds to your magic meter.
+    # Instead we start the player with a magic meter when they start a new game.
+    # This way other items can use the magic meter before the player gets deku leaf.
+    randomizer.dol.write_data(write_u32, 0x800C375C, 0x60000000)  # Don't set max magic meter
+    randomizer.dol.write_data(write_u32, 0x800C3768, 0x60000000)  # Don't set current magic meter
+
+
+def make_sail_behave_like_swift_sail(randomizer: 'Randomizer'):
+    # Causes the wind direction to always change to face the direction KoRL is facing as long as the sail is out.
+    # Also doubles KoRL's speed.
+    # And changes the textures to match the swift sail from HD.
+
+    # Apply the asm patch.
+    patcher.apply_patch(randomizer, "swift_sail")
+
+    # Update the pause menu name for the sail.
+    msg = randomizer.bmg.messages_by_id[463]
+    msg.string = "Swift Sail"
+
+    new_sail_tex_image_path = os.path.join(ASSETS_PATH, "swift sail texture.png")
+    new_sail_icon_image_path = os.path.join(ASSETS_PATH, "swift sail icon.png")
+    new_sail_itemget_tex_image_path = os.path.join(ASSETS_PATH, "swift sail item get texture.png")
+
+    if not randomizer.using_custom_sail_texture:
+        # Modify the sail's texture while sailing (only if the custom player model didn't already change the sail texture).
+        ship_arc = randomizer.get_arc("files/res/Object/Ship.arc")
+        sail_image = ship_arc.get_file("new_ho1.bti")
+        sail_image.replace_image_from_path(new_sail_tex_image_path)
+        sail_image.save_changes()
+
+    # Modify the sail's item icon.
+    itemicon_arc = randomizer.get_arc("files/res/Msg/itemicon.arc")
+    sail_icon_image = itemicon_arc.get_file("sail_00.bti")
+    sail_icon_image.replace_image_from_path(new_sail_icon_image_path)
+    sail_icon_image.save_changes()
+
+    # Modify the sail's item get texture.
+    sail_itemget_arc = randomizer.get_arc("files/res/Object/Vho.arc")
+    sail_itemget_model = sail_itemget_arc.get_file("vho.bdl")
+    sail_itemget_tex_image = sail_itemget_model.tex1.textures_by_name["Vho"][0]
+    sail_itemget_tex_image.replace_image_from_path(new_sail_itemget_tex_image_path)
+    sail_itemget_model.save_changes()
+
+
+def add_ganons_tower_warp_to_ff2(randomizer: 'Randomizer'):
+    # Normally the warp object from Forsaken Fortress down to Ganon's Tower only appears in FF3.
+    # But we changed Forsaken Fortress to remain permanently as FF2.
+    # So we need to add the warp object to FF2 as well so the player can conveniently go between the sea and Ganon's Tower.
+    # To do this we copy the warp entity from layer 2 onto layer 1.
+
+    dzx = randomizer.get_arc("files/res/Stage/sea/Room1.arc").get_file("room.dzr")
+
+    layer_2_actors = dzx.entries_by_type_and_layer("ACTR", 2)
+    layer_2_warp = next(x for x in layer_2_actors if x.name == "Warpmj")
+
+    layer_1_warp = dzx.add_entity("ACTR", layer=1)
+    layer_1_warp.name = layer_2_warp.name
+    layer_1_warp.params = layer_2_warp.params
+    layer_1_warp.x_pos = layer_2_warp.x_pos
+    layer_1_warp.y_pos = layer_2_warp.y_pos
+    layer_1_warp.z_pos = layer_2_warp.z_pos
+    layer_1_warp.x_rot = layer_2_warp.x_rot
+    layer_1_warp.y_rot = layer_2_warp.y_rot
+    layer_1_warp.z_rot = layer_2_warp.z_rot
+    layer_1_warp.enemy_number = layer_2_warp.enemy_number
+
+    dzx.save_changes()
+
+
+def add_chest_in_place_medli_grappling_hook_gift(randomizer: 'Randomizer'):
+    # Add a chest in place of Medli locked in the jail cell at the peak of Dragon Roost Cavern.
+
+    dzs = randomizer.get_arc("files/res/Stage/M_Dra09/Stage.arc").get_file("stage.dzs")
+
+    chest_in_jail = dzs.add_entity("TRES", layer=None)
+    chest_in_jail.name = "takara3"
+    chest_in_jail.params = 0xFF000000
+    chest_in_jail.switch_to_set = 0xFF
+    chest_in_jail.chest_type = 2
+    chest_in_jail.opened_flag = 0x11
+    chest_in_jail.x_pos = -1620.81
+    chest_in_jail.y_pos = 13600
+    chest_in_jail.z_pos = 263.034
+    chest_in_jail.room_num = 9
+    chest_in_jail.y_rot = 0xCC16
+    chest_in_jail.item_id = randomizer.item_name_to_id["Grappling Hook"]
+
+    dzs.save_changes()
+
+    dzs = randomizer.get_arc("files/res/Stage/M_NewD2/Stage.arc").get_file("stage.dzs")
+
+    dummy_chest = dzs.add_entity("TRES", layer=None)
+    dummy_chest.name = chest_in_jail.name
+    dummy_chest.params = chest_in_jail.params
+    dummy_chest.switch_to_set = chest_in_jail.switch_to_set
+    dummy_chest.chest_type = chest_in_jail.chest_type
+    dummy_chest.opened_flag = chest_in_jail.opened_flag
+    dummy_chest.x_pos = chest_in_jail.x_pos
+    dummy_chest.y_pos = chest_in_jail.y_pos
+    dummy_chest.z_pos = chest_in_jail.z_pos
+    dummy_chest.room_num = chest_in_jail.room_num
+    dummy_chest.y_rot = chest_in_jail.y_rot
+    dummy_chest.item_id = 0xFF
+
+    dzs.save_changes()
+
+
+def add_chest_in_place_queen_fairy_cutscene(randomizer: 'Randomizer'):
+    # Add a chest in place of the Queen Fairy cutscene inside Mother Isle.
+
+    dzx = randomizer.get_arc("files/res/Stage/sea/Room9.arc").get_file("room.dzr")
+
+    mother_island_chest = dzx.add_entity("TRES", layer=None)
+    mother_island_chest.name = "takara3"
+    mother_island_chest.params = 0xFF000000
+    mother_island_chest.switch_to_set = 0xFF
+    mother_island_chest.chest_type = 2
+    mother_island_chest.opened_flag = 0x1C
+    mother_island_chest.x_pos = -180031
+    mother_island_chest.y_pos = 723
+    mother_island_chest.z_pos = -199995
+    mother_island_chest.room_num = 9
+    mother_island_chest.y_rot = 0x1000
+    mother_island_chest.item_id = randomizer.item_name_to_id["Progressive Bow"]
+
+    dzx.save_changes()
+
+
+def add_cube_to_earth_temple_first_room(randomizer: 'Randomizer'):
+    # If the player enters Earth Temple, uses Medli to cross the gap, brings Medli into the next room, then leaves Earth Temple, Medli will no longer be in the first room.
+    # This can softlock the player if they don't have Deku Leaf to get across the gap in that first room.
+    # So we add a cube to that first room so the player can just climb up.
+
+    dzx = randomizer.get_arc("files/res/Stage/M_Dai/Room0.arc").get_file("room.dzr")
+
+    cube = dzx.add_entity("ACTR", layer=None)
+    cube.name = "Ecube"
+    cube.params = 0x8C00FF00
+    cube.x_pos = -6986.07
+    cube.y_pos = -600
+    cube.z_pos = 4077.37
+
+    dzx.save_changes()
+
+
+def add_more_magic_jars(randomizer: 'Randomizer'):
+    # Add more magic jar drops to locations where it can be very inconvenient to not have them.
+
+    # Dragon Roost Cavern doesn't have any magic jars in it since you normally wouldn't have Deku Leaf for it.
+    # But since using Deku Leaf in DRC can be required by the randomizer, it can be annoying to not have any way to refill MP.
+    # We change several skulls that originally dropped nothing when destroyed to drop magic jars instead.
+    drc_center_room = randomizer.get_arc("files/res/Stage/M_NewD2/Room2.arc").get_file("room.dzr")
+    actors = drc_center_room.entries_by_type("ACTR")
+    skulls = [actor for actor in actors if actor.name == "Odokuro"]
+    skulls[2].item_id = randomizer.item_name_to_id["Small Magic Jar (Pickup)"]
+    skulls[2].save_changes()
+    skulls[5].item_id = randomizer.item_name_to_id["Large Magic Jar (Pickup)"]
+    skulls[5].save_changes()
+    drc_before_boss_room = randomizer.get_arc("files/res/Stage/M_NewD2/Room10.arc").get_file("room.dzr")
+    actors = drc_before_boss_room.entries_by_type("ACTR")
+    skulls = [actor for actor in actors if actor.name == "Odokuro"]
+    skulls[0].item_id = randomizer.item_name_to_id["Large Magic Jar (Pickup)"]
+    skulls[0].save_changes()
+    skulls[9].item_id = randomizer.item_name_to_id["Large Magic Jar (Pickup)"]
+    skulls[9].save_changes()
+
+    # The grass on the small elevated islands around DRI have a lot of grass that can drop magic, but it's not guaranteed.
+    # Add a new piece of grass to each of the 2 small islands that are guaranteed to drop magic.
+    dri = randomizer.get_arc("files/res/Stage/sea/Room13.arc").get_file("room.dzr")
+    grass1 = dri.add_entity("ACTR", layer=None)
+    grass1.name = "kusax1"
+    grass1.grass_type = 0
+    grass1.grass_subtype = 0
+    grass1.grass_item_drop_type = 0x38  # 62.50% chance of small magic, 37.50% chance of large magic
+    grass1.x_pos = 209694
+    grass1.y_pos = 1900
+    grass1.z_pos = -202463
+    grass2 = dri.add_entity("ACTR", layer=None)
+    grass2.name = "kusax1"
+    grass2.grass_type = 0
+    grass2.grass_subtype = 0
+    grass2.grass_item_drop_type = 0x38  # 62.50% chance of small magic, 37.50% chance of large magic
+    grass2.x_pos = 209333
+    grass2.y_pos = 1300
+    grass2.z_pos = -210145
+    dri.save_changes()
+
+    # Make one of the pots next to the entrance to the TotG miniboss always drop large magic.
+    totg_before_miniboss_room = randomizer.get_arc("files/res/Stage/Siren/Room14.arc").get_file("room.dzr")
+    actors = totg_before_miniboss_room.entries_by_type("ACTR")
+    pots = [actor for actor in actors if actor.name == "kotubo"]
+    pots[1].item_id = randomizer.item_name_to_id["Large Magic Jar (Pickup)"]
+    pots[1].save_changes()
+
+
+def remove_title_and_ending_videos(randomizer: 'Randomizer'):
+    # Remove the huge video files that play during the ending and if you sit on the title screen a while.
+    # We replace them with a very small blank video file to save space.
+
+    blank_video_path = os.path.join(ASSETS_PATH, "blank.thp")
+    with open(blank_video_path, "rb") as f:
+        new_data = BytesIO(f.read())
+    randomizer.replace_raw_file("files/thpdemo/title_loop.thp", new_data)
+    randomizer.replace_raw_file("files/thpdemo/end_st_epilogue.thp", new_data)
+
+
+def modify_title_screen_logo(randomizer: 'Randomizer'):
+    new_title_image_path = os.path.join(ASSETS_PATH, "title.png")
+    new_subtitle_image_path = os.path.join(ASSETS_PATH, "subtitle.png")
+    tlogoe_arc = randomizer.get_arc("files/res/Object/TlogoE.arc")
+
+    title_image = tlogoe_arc.get_file("logo_zelda_main.bti")
+    title_image.replace_image_from_path(new_title_image_path)
+    title_image.save_changes()
+
+    subtitle_model = tlogoe_arc.get_file("subtitle_start_anim_e.bdl")
+    subtitle_image = subtitle_model.tex1.textures_by_name["logo_sub_e"][0]
+    subtitle_image.replace_image_from_path(new_subtitle_image_path)
+    subtitle_model.save_changes()
+
+    subtitle_glare_model = tlogoe_arc.get_file("subtitle_kirari_e.bdl")
+    subtitle_glare_image = subtitle_glare_model.tex1.textures_by_name["logo_sub_e"][0]
+    subtitle_glare_image.replace_image_from_path(new_subtitle_image_path)
+    subtitle_glare_model.save_changes()
+
+    # Move where the subtitle is drawn downwards a bit so the word "the" doesn't get covered up by the main logo.
+    title_rel = randomizer.get_rel("files/rels/d_a_title.rel")
+    y_pos = title_rel.read_data(read_float, 0x1F44)
+    y_pos -= 13.0
+    title_rel.write_data(write_float, 0x1F44, y_pos)
+
+    # Move the sparkle particle effect down a bit to fit the taller logo better.
+    # (This has the side effect of also moving down the clouds below the ship, but this is not noticeable.)
+    data = tlogoe_arc.get_file_entry("title_logo_e.blo").data
+    write_u16(data, 0x162, 0x106)  # Increase Y pos by 16 pixels (0xF6 -> 0x106)
+
+
+def update_game_name_icon_and_banners(randomizer: 'Randomizer'):
+    new_game_name = "Wind Waker Randomized %s" % randomizer.seed
+    banner_data = randomizer.get_raw_file("files/opening.bnr")
+    write_magic_str(banner_data, 0x1860, new_game_name, 0x40)
+
+    new_game_id = "GZLE99"
+    boot_data = randomizer.get_raw_file("sys/boot.bin")
+    write_magic_str(boot_data, 0, new_game_id, 6)
+
+    new_memory_card_game_name = "Wind Waker Randomizer"
+    randomizer.dol.write_data(write_magic_str, 0x80339690, new_memory_card_game_name, 21)
+
+    new_image_file_path = os.path.join(ASSETS_PATH, "banner.png")
+    image_format = texture_utils.ImageFormat.RGB5A3
+    palette_format = texture_utils.PaletteFormat.RGB5A3
+    image_data, _, _, image_width, image_height = texture_utils.encode_image_from_path(new_image_file_path,
+                                                                                       image_format, palette_format)
+    assert image_width == 96
+    assert image_height == 32
+    assert data_len(image_data) == 0x1800
+    image_data.seek(0)
+    write_bytes(banner_data, 0x20, image_data.read())
+
+    cardicon_arc = randomizer.get_arc("files/res/CardIcon/cardicon.arc")
+
+    memory_card_icon_file_path = os.path.join(ASSETS_PATH, "memory card icon.png")
+    memory_card_icon = cardicon_arc.get_file("ipl_icon1.bti")
+    memory_card_icon.replace_image_from_path(memory_card_icon_file_path)
+    memory_card_icon.save_changes()
+
+    memory_card_banner_file_path = os.path.join(ASSETS_PATH, "memory card banner.png")
+    memory_card_banner = cardicon_arc.get_file("ipl_banner.bti")
+    memory_card_banner.replace_image_from_path(memory_card_banner_file_path)
+    memory_card_banner.save_changes()
+
+
+def allow_dungeon_items_to_appear_anywhere(randomizer: 'Randomizer'):
+    item_get_funcs_list = 0x803888C8
+    item_resources_list_start = 0x803842B0
+    field_item_resources_list_start = 0x803866B0
+
+    dungeon_items = [
+        ("DRC", "Small Key", 0x13),
+        ("DRC", "Big Key", 0x14),
+        ("DRC", "Dungeon Map", 0x1B),
+        ("DRC", "Compass", 0x1C),
+        ("FW", "Small Key", 0x1D),
+        ("FW", "Big Key", 0x40),
+        ("FW", "Dungeon Map", 0x41),
+        ("FW", "Compass", 0x5A),
+        ("TotG", "Small Key", 0x5B),
+        ("TotG", "Big Key", 0x5C),
+        ("TotG", "Dungeon Map", 0x5D),
+        ("TotG", "Compass", 0x5E),
+        ("FF", "Dungeon Map", 0x5F),
+        ("FF", "Compass", 0x60),
+        ("ET", "Small Key", 0x73),
+        ("ET", "Big Key", 0x74),
+        ("ET", "Dungeon Map", 0x75),
+        ("ET", "Compass", 0x76),
+        ("WT", "Small Key", 0x77),
+        ("WT", "Big Key", 0x81),
+        ("WT", "Dungeon Map", 0x84),
+        ("WT", "Compass", 0x85),
+    ]
+
+    for short_dungeon_name, base_item_name, item_id in dungeon_items:
+        item_name = short_dungeon_name + " " + base_item_name
+        base_item_id = randomizer.item_name_to_id[base_item_name]
+        dungeon_name = DUNGEON_NAME_DICT[short_dungeon_name]
+
+        # Register the proper item ID for this item with the randomizer.
+        randomizer.register_renamed_item(item_id, item_name)
+
+        # Update the item get funcs for the dungeon items to point to our custom item get funcs instead.
+        custom_symbol_name = item_name.lower().replace(" ", "_") + "_item_get_func"
+        item_get_func_addr = item_get_funcs_list + item_id * 4
+        randomizer.dol.write_data(write_u32, item_get_func_addr, randomizer.main_custom_symbols[custom_symbol_name])
+
+        # Add item get messages for the items.
+        if base_item_name == "Small Key":
+            description_format_string = "\\{1A 05 00 00 01}You got %s \\{1A 06 FF 00 00 01}%s small key\\{1A 06 FF 00 00 00}!"
+            description = word_wrap_string(
+                description_format_string % (get_indefinite_article(dungeon_name), dungeon_name))
+        elif base_item_name == "Big Key":
+            description_format_string = "\\{1A 05 00 00 01}You got the \\{1A 06 FF 00 00 01}%s Big Key\\{1A 06 FF 00 00 00}!"
+            description = word_wrap_string(description_format_string % dungeon_name)
+        elif base_item_name == "Dungeon Map":
+            description_format_string = "\\{1A 05 00 00 01}You got the \\{1A 06 FF 00 00 01}%s Dungeon Map\\{1A 06 FF 00 00 00}!"
+            description = word_wrap_string(description_format_string % dungeon_name)
+        elif base_item_name == "Compass":
+            description_format_string = "\\{1A 05 00 00 01}You got the \\{1A 06 FF 00 00 01}%s Compass\\{1A 06 FF 00 00 00}!"
+            description = word_wrap_string(description_format_string % dungeon_name)
+
+        msg = randomizer.bmg.add_new_message(101 + item_id)
+        msg.string = description
+        msg.text_box_type = 9  # Item get message box
+        msg.initial_draw_type = 2  # Slow initial message speed
+        msg.display_item_id = item_id
+
+        # Update item resources and field item resources so the models/icons show correctly for these items.
+        item_resources_addr_to_copy_from = item_resources_list_start + base_item_id * 0x24
+        field_item_resources_addr_to_copy_from = field_item_resources_list_start + base_item_id * 0x24
+        item_resources_addr = item_resources_list_start + item_id * 0x24
+        field_item_resources_addr = field_item_resources_list_start + item_id * 0x1C
+
+        arc_name_pointer = randomizer.arc_name_pointers[base_item_id]
+
+        randomizer.dol.write_data(write_u32, field_item_resources_addr, arc_name_pointer)
+        randomizer.dol.write_data(write_u32, item_resources_addr, arc_name_pointer)
+
+        item_icon_filename_pointer = randomizer.icon_name_pointer[base_item_id]
+        randomizer.dol.write_data(write_u32, item_resources_addr + 4, item_icon_filename_pointer)
+
+        data1 = randomizer.dol.read_data(read_bytes, item_resources_addr_to_copy_from + 8, 0xD)
+        randomizer.dol.write_data(write_bytes, item_resources_addr + 8, data1)
+        randomizer.dol.write_data(write_bytes, field_item_resources_addr + 4, data1)
+        data2 = randomizer.dol.read_data(read_bytes, item_resources_addr_to_copy_from + 0x1C, 4)
+        randomizer.dol.write_data(write_bytes, item_resources_addr + 0x1C, data2)
+        randomizer.dol.write_data(write_bytes, field_item_resources_addr + 0x14, data2)
+
+        data3 = randomizer.dol.read_data(read_bytes, item_resources_addr_to_copy_from + 0x15, 7)
+        randomizer.dol.write_data(write_bytes, item_resources_addr + 0x15, data3)
+        data4 = randomizer.dol.read_data(read_bytes, item_resources_addr_to_copy_from + 0x20, 4)
+        randomizer.dol.write_data(write_bytes, item_resources_addr + 0x20, data4)
+
+        data5 = randomizer.dol.read_data(read_bytes, field_item_resources_addr_to_copy_from + 0x11, 3)
+        randomizer.dol.write_data(write_bytes, field_item_resources_addr + 0x11, data5)
+        data6 = randomizer.dol.read_data(read_bytes, field_item_resources_addr_to_copy_from + 0x18, 4)
+        randomizer.dol.write_data(write_bytes, field_item_resources_addr + 0x18, data6)
+
 
 def word_wrap_string(string, max_line_length=34):
-  index_in_str = 0
-  wordwrapped_str = ""
-  current_word = ""
-  current_word_length = 0
-  length_of_curr_line = 0
-  while index_in_str < len(string):
-    char = string[index_in_str]
-    
-    if char == "\\":
-      assert string[index_in_str+1] == "{"
-      substr = string[index_in_str:]
-      control_code_str_len = substr.index("}") + 1
-      substr = substr[:control_code_str_len]
-      current_word += substr
-      index_in_str += control_code_str_len
-    elif char == "\n":
-      wordwrapped_str += current_word
-      wordwrapped_str += char
-      length_of_curr_line = 0
-      current_word = ""
-      current_word_length = 0
-      index_in_str += 1
-    elif char == " ":
-      wordwrapped_str += current_word
-      wordwrapped_str += char
-      length_of_curr_line += current_word_length + len(char)
-      current_word = ""
-      current_word_length = 0
-      index_in_str += 1
-    else:
-      current_word += char
-      current_word_length += 1
-      index_in_str += 1
-      
-      if length_of_curr_line + current_word_length > max_line_length:
-        wordwrapped_str += "\n"
-        length_of_curr_line = 0
-        
-        if current_word_length > max_line_length:
-          wordwrapped_str += current_word + "\n"
-          current_word = ""
-  
-  wordwrapped_str += current_word
-  
-  return wordwrapped_str
+    index_in_str = 0
+    wordwrapped_str = ""
+    current_word = ""
+    current_word_length = 0
+    length_of_curr_line = 0
+    while index_in_str < len(string):
+        char = string[index_in_str]
+
+        if char == "\\":
+            assert string[index_in_str + 1] == "{"
+            substr = string[index_in_str:]
+            control_code_str_len = substr.index("}") + 1
+            substr = substr[:control_code_str_len]
+            current_word += substr
+            index_in_str += control_code_str_len
+        elif char == "\n":
+            wordwrapped_str += current_word
+            wordwrapped_str += char
+            length_of_curr_line = 0
+            current_word = ""
+            current_word_length = 0
+            index_in_str += 1
+        elif char == " ":
+            wordwrapped_str += current_word
+            wordwrapped_str += char
+            length_of_curr_line += current_word_length + len(char)
+            current_word = ""
+            current_word_length = 0
+            index_in_str += 1
+        else:
+            current_word += char
+            current_word_length += 1
+            index_in_str += 1
+
+            if length_of_curr_line + current_word_length > max_line_length:
+                wordwrapped_str += "\n"
+                length_of_curr_line = 0
+
+                if current_word_length > max_line_length:
+                    wordwrapped_str += current_word + "\n"
+                    current_word = ""
+
+    wordwrapped_str += current_word
+
+    return wordwrapped_str
+
 
 def get_indefinite_article(string):
-  first_letter = string.strip()[0].lower()
-  if first_letter in ["a", "e", "i", "o", "u"]:
-    return "an"
-  else:
-    return "a"
+    first_letter = string.strip()[0].lower()
+    if first_letter in ["a", "e", "i", "o", "u"]:
+        return "an"
+    else:
+        return "a"
+
 
 def upper_first_letter(string):
-  first_letter = string[0].upper()
-  return first_letter + string[1:]
+    first_letter = string[0].upper()
+    return first_letter + string[1:]
+
 
 def pad_string_to_next_4_lines(string):
-  lines = string.split("\n")
-  padding_lines_needed = (4 - len(lines) % 4) % 4
-  for i in range(padding_lines_needed):
-    lines.append("")
-  return "\n".join(lines) + "\n"
+    lines = string.split("\n")
+    padding_lines_needed = (4 - len(lines) % 4) % 4
+    for i in range(padding_lines_needed):
+        lines.append("")
+    return "\n".join(lines) + "\n"
 
-def remove_ballad_of_gales_warp_in_cutscene(self):
-  for island_index in range(1, 49+1):
-    dzx = self.get_arc("files/res/Stage/sea/Room%d.arc" % island_index).get_file("room.dzr")
-    for spawn in dzx.entries_by_type("PLYR"):
-      if spawn.spawn_type == 9: # Spawn type is warping in on a cyclone
-        spawn.spawn_type = 2 # Change to spawn type of instantly spawning on KoRL instead
-        spawn.save_changes()
 
-def fix_shop_item_y_offsets(self):
-  shop_item_display_data_list_start = 0x8034FD10
-  
-  for item_id in range(0, 0xFE+1):
-    display_data_addr = shop_item_display_data_list_start + item_id*0x20
-    y_offset = self.dol.read_data(read_float, display_data_addr+0x10)
-    
-    if y_offset == 0 and item_id not in [0x10, 0x11, 0x12]:
-      # If the item didn't originally have a Y offset we need to give it one so it's not sunken into the pedestal.
-      # Only exception are for items 10 11 and 12 - arrow refill pickups. Those have no Y offset but look fine already.
-      new_y_offset = 20.0
-      self.dol.write_data(write_float, display_data_addr+0x10, new_y_offset)
+def remove_ballad_of_gales_warp_in_cutscene(randomizer: 'Randomizer'):
+    for island_index in range(1, 49 + 1):
+        dzx = randomizer.get_arc("files/res/Stage/sea/Room%d.arc" % island_index).get_file("room.dzr")
+        for spawn in dzx.entries_by_type("PLYR"):
+            if spawn.spawn_type == 9:  # Spawn type is warping in on a cyclone
+                spawn.spawn_type = 2  # Change to spawn type of instantly spawning on KoRL instead
+                spawn.save_changes()
 
-def update_shop_item_descriptions(self, locations: list[Location]):
-  item_name = filter((lambda loc: loc.name == "GreatSeaBeedleShop20Rupee"), locations).__next__().current_item.simple_offset_rep()
-  cost = 20
-  msg = self.bmg.messages_by_id[3906]
-  msg.string = "\\{1A 06 FF 00 00 01}%s  %d Rupees\\{1A 06 FF 00 00 00}" % (item_name, cost)
-  msg = self.bmg.messages_by_id[3909]
-  msg.string = "%s   %d Rupees\nWill you buy it?\n\\{1A 05 00 00 08}I'll buy it\nNo thanks" % (item_name, cost)
 
-  item_name = filter((lambda loc: loc.name == "RockSpireBeedle500RupeeItem"), locations).__next__().current_item.simple_offset_rep()
-  cost = 500
-  msg = self.bmg.messages_by_id[12106]
-  msg.string = "\\{1A 06 FF 00 00 01}%s  %d Rupees\n\\{1A 06 FF 00 00 00}This is my last one." % (item_name, cost)
-  msg = self.bmg.messages_by_id[12109]
-  msg.string = "This \\{1A 06 FF 00 00 01}%s\\{1A 06 FF 00 00 00} is a mere \\{1A 06 FF 00 00 01}%d Rupees\\{1A 06 FF 00 00 00}!\nBuy it! Buy it! Buy buy buy!\n\\{1A 05 00 00 08}I'll buy it\nNo thanks" % (item_name, cost)
-  
-  item_name = filter((lambda loc: loc.name == "RockSpireBeedle950RupeeItem"), locations).__next__().current_item.simple_offset_rep()
-  cost = 950
-  msg = self.bmg.messages_by_id[12107]
-  msg.string = "\\{1A 06 FF 00 00 01}%s  %d Rupees\n\\{1A 06 FF 00 00 00}This is my last one of these, too." % (item_name, cost)
-  msg = self.bmg.messages_by_id[12110]
-  msg.string = "This \\{1A 06 FF 00 00 01}%s\\{1A 06 FF 00 00 00} is only \\{1A 06 FF 00 00 01}%d Rupees\\{1A 06 FF 00 00 00}!\nBuy it! Buy it! Buy buy buy!\n\\{1A 05 00 00 08}I'll buy it\nNo thanks" % (item_name, cost)
-  
-  item_name = filter((lambda loc: loc.name == "RockSpireBeedle900RupeeItem"), locations).__next__().current_item.simple_offset_rep()
-  cost = 900
-  msg = self.bmg.messages_by_id[12108]
-  msg.string = "\\{1A 06 FF 00 00 01}%s  %d Rupees\n\\{1A 06 FF 00 00 00}The price may be high, but it'll pay\noff handsomely in the end!" % (item_name, cost)
-  msg = self.bmg.messages_by_id[12111]
-  msg.string = "This \\{1A 06 FF 00 00 01}%s \\{1A 06 FF 00 00 00}is just \\{1A 06 FF 00 00 01}%d Rupees!\\{1A 06 FF 00 00 00}\nBuy it! Buy it! Buy buy buy!\n\\{1A 05 00 00 08}I'll buy it\nNo thanks" % (item_name, cost)
+def fix_shop_item_y_offsets(randomizer: 'Randomizer'):
+    shop_item_display_data_list_start = 0x8034FD10
 
-def update_auction_item_names(self, locations: list[Location]):
-  item_name = filter((lambda loc: loc.name == "WindfallAuction5Rupee"), locations).__next__().current_item.simple_offset_rep()
-  msg = self.bmg.messages_by_id[7441]
-  msg.string = "\\{1A 06 FF 00 00 01}%s" % item_name
-  
-  item_name = filter((lambda loc: loc.name == "WindfallAuction40Rupee"), locations).__next__().current_item.simple_offset_rep()
-  msg = self.bmg.messages_by_id[7440]
-  msg.string = "\\{1A 06 FF 00 00 01}%s" % item_name
-  
-  item_name = filter((lambda loc: loc.name == "WindfallAuction60Rupee"), locations).__next__().current_item.simple_offset_rep()
-  msg = self.bmg.messages_by_id[7442]
-  msg.string = "\\{1A 06 FF 00 00 01}%s" % item_name
-  
-  item_name = filter((lambda loc: loc.name == "WindfallAuction80Rupee"), locations).__next__().current_item.simple_offset_rep()
-  msg = self.bmg.messages_by_id[7443]
-  msg.string = "\\{1A 06 FF 00 00 01}%s" % item_name
+    for item_id in range(0, 0xFE + 1):
+        display_data_addr = shop_item_display_data_list_start + item_id * 0x20
+        y_offset = randomizer.dol.read_data(read_float, display_data_addr + 0x10)
 
-def update_battlesquid_item_names(self, locations: list[Location]):
-  item_name = filter((lambda loc: loc.name == "WindfallBattleSquidFirstPrize"), locations).__next__().current_item.simple_offset_rep()
-  msg = self.bmg.messages_by_id[7520]
-  msg.string = "\\{1A 05 01 00 8E}Hoorayyy! Yayyy! Yayyy!\nOh, thank you, Mr. Sailor!\n\n\n"
-  msg.string += word_wrap_string(
-    "Please take this \\{1A 06 FF 00 00 01}%s\\{1A 06 FF 00 00 00} as a sign of our gratitude. You are soooooo GREAT!" % item_name,
-    max_line_length=43
-  )
-  
-  item_name = filter((lambda loc: loc.name == "WindfallBattleSquidSecondPrize"), locations).__next__().current_item.simple_offset_rep()
-  msg = self.bmg.messages_by_id[7521]
-  msg.string = "\\{1A 05 01 00 8E}Hoorayyy! Yayyy! Yayyy!\nOh, thank you so much, Mr. Sailor!\n\n\n"
-  msg.string += word_wrap_string(
-    "This is our thanks to you! It's been passed down on our island for many years, so don't tell the island elder, OK? Here...\\{1A 06 FF 00 00 01}\\{1A 05 00 00 39} \\{1A 06 FF 00 00 00}Please accept this \\{1A 06 FF 00 00 01}%s\\{1A 06 FF 00 00 00}!" % item_name,
-    max_line_length=43
-  )
-  
-  # The high score one doesn't say the item name in text anywhere, so no need to update it.
-  #item_name = self.logic.done_item_locations["Windfall Island - Battlesquid - 20 Shots or Less Prize"]
-  #msg = self.bmg.messages_by_id[7523]
+        if y_offset == 0 and item_id not in [0x10, 0x11, 0x12]:
+            # If the item didn't originally have a Y offset we need to give it one so it's not sunken into the pedestal.
+            # Only exception are for items 10 11 and 12 - arrow refill pickups. Those have no Y offset but look fine already.
+            new_y_offset = 20.0
+            randomizer.dol.write_data(write_float, display_data_addr + 0x10, new_y_offset)
 
-def update_item_names_in_letter_advertising_rock_spire_shop(self, locations: list[Location]):
-  item_name_1 = filter((lambda loc: loc.name == "RockSpireBeedle500RupeeItem"), locations).__next__().current_item.simple_offset_rep()
-  item_name_2 = filter((lambda loc: loc.name == "RockSpireBeedle950RupeeItem"), locations).__next__().current_item.simple_offset_rep()
-  item_name_3 = filter((lambda loc: loc.name == "RockSpireBeedle900RupeeItem"), locations).__next__().current_item.simple_offset_rep()
-  msg = self.bmg.messages_by_id[3325]
-  
-  lines = msg.string.split("\n")
-  unchanged_string_before = "\n".join(lines[0:8]) + "\n"
-  unchanged_string_after = "\n".join(lines[12:])
-  
-  hint_string = "Do you have need of %s \\{1A 06 FF 00 00 01}%s\\{1A 06 FF 00 00 00}, %s \\{1A 06 FF 00 00 01}%s\\{1A 06 FF 00 00 00}, or %s \\{1A 06 FF 00 00 01}%s\\{1A 06 FF 00 00 00}? We have them at special bargain prices." % (
-    get_indefinite_article(item_name_1), item_name_1,
-    get_indefinite_article(item_name_2), item_name_2,
-    get_indefinite_article(item_name_3), item_name_3,
-  )
-  
-  # Letters have 2 spaces at the start of each line, so word wrap to 39 chars instead of 43, then add 2 spaces to each line.
-  hint_string = word_wrap_string(hint_string, max_line_length=39)
-  hint_string = pad_string_to_next_4_lines(hint_string)
-  hint_lines = hint_string.split("\n")
-  leading_spaces_hint_lines = []
-  for hint_line in hint_lines:
-    if hint_line == "":
-      leading_spaces_hint_lines.append(hint_line)
+
+def update_shop_item_descriptions(randomizer: 'Randomizer', locations: List[Location]):
+    item_name = filter((lambda loc: loc.name == "GreatSeaBeedleShop20Rupee"),
+                       locations).__next__().current_item.simple_offset_rep()
+    cost = 20
+    msg = randomizer.bmg.messages_by_id[3906]
+    msg.string = "\\{1A 06 FF 00 00 01}%s  %d Rupees\\{1A 06 FF 00 00 00}" % (item_name, cost)
+    msg = randomizer.bmg.messages_by_id[3909]
+    msg.string = "%s   %d Rupees\nWill you buy it?\n\\{1A 05 00 00 08}I'll buy it\nNo thanks" % (item_name, cost)
+
+    item_name = filter((lambda loc: loc.name == "RockSpireBeedle500RupeeItem"),
+                       locations).__next__().current_item.simple_offset_rep()
+    cost = 500
+    msg = randomizer.bmg.messages_by_id[12106]
+    msg.string = "\\{1A 06 FF 00 00 01}%s  %d Rupees\n\\{1A 06 FF 00 00 00}This is my last one." % (item_name, cost)
+    msg = randomizer.bmg.messages_by_id[12109]
+    msg.string = "This \\{1A 06 FF 00 00 01}%s\\{1A 06 FF 00 00 00} is a mere \\{1A 06 FF 00 00 01}%d Rupees\\{1A 06 FF 00 00 00}!\nBuy it! Buy it! Buy buy buy!\n\\{1A 05 00 00 08}I'll buy it\nNo thanks" % (
+    item_name, cost)
+
+    item_name = filter((lambda loc: loc.name == "RockSpireBeedle950RupeeItem"),
+                       locations).__next__().current_item.simple_offset_rep()
+    cost = 950
+    msg = randomizer.bmg.messages_by_id[12107]
+    msg.string = "\\{1A 06 FF 00 00 01}%s  %d Rupees\n\\{1A 06 FF 00 00 00}This is my last one of these, too." % (
+    item_name, cost)
+    msg = randomizer.bmg.messages_by_id[12110]
+    msg.string = "This \\{1A 06 FF 00 00 01}%s\\{1A 06 FF 00 00 00} is only \\{1A 06 FF 00 00 01}%d Rupees\\{1A 06 FF 00 00 00}!\nBuy it! Buy it! Buy buy buy!\n\\{1A 05 00 00 08}I'll buy it\nNo thanks" % (
+    item_name, cost)
+
+    item_name = filter((lambda loc: loc.name == "RockSpireBeedle900RupeeItem"),
+                       locations).__next__().current_item.simple_offset_rep()
+    cost = 900
+    msg = randomizer.bmg.messages_by_id[12108]
+    msg.string = "\\{1A 06 FF 00 00 01}%s  %d Rupees\n\\{1A 06 FF 00 00 00}The price may be high, but it'll pay\noff handsomely in the end!" % (
+    item_name, cost)
+    msg = randomizer.bmg.messages_by_id[12111]
+    msg.string = "This \\{1A 06 FF 00 00 01}%s \\{1A 06 FF 00 00 00}is just \\{1A 06 FF 00 00 01}%d Rupees!\\{1A 06 FF 00 00 00}\nBuy it! Buy it! Buy buy buy!\n\\{1A 05 00 00 08}I'll buy it\nNo thanks" % (
+    item_name, cost)
+
+
+def update_auction_item_names(randomizer: 'Randomizer', locations: List[Location]):
+    item_name = filter((lambda loc: loc.name == "WindfallAuction5Rupee"),
+                       locations).__next__().current_item.simple_offset_rep()
+    msg = randomizer.bmg.messages_by_id[7441]
+    msg.string = "\\{1A 06 FF 00 00 01}%s" % item_name
+
+    item_name = filter((lambda loc: loc.name == "WindfallAuction40Rupee"),
+                       locations).__next__().current_item.simple_offset_rep()
+    msg = randomizer.bmg.messages_by_id[7440]
+    msg.string = "\\{1A 06 FF 00 00 01}%s" % item_name
+
+    item_name = filter((lambda loc: loc.name == "WindfallAuction60Rupee"),
+                       locations).__next__().current_item.simple_offset_rep()
+    msg = randomizer.bmg.messages_by_id[7442]
+    msg.string = "\\{1A 06 FF 00 00 01}%s" % item_name
+
+    item_name = filter((lambda loc: loc.name == "WindfallAuction80Rupee"),
+                       locations).__next__().current_item.simple_offset_rep()
+    msg = randomizer.bmg.messages_by_id[7443]
+    msg.string = "\\{1A 06 FF 00 00 01}%s" % item_name
+
+
+def update_battlesquid_item_names(randomizer: 'Randomizer', locations: List[Location]):
+    item_name = filter((lambda loc: loc.name == "WindfallBattleSquidFirstPrize"),
+                       locations).__next__().current_item.simple_offset_rep()
+    msg = randomizer.bmg.messages_by_id[7520]
+    msg.string = "\\{1A 05 01 00 8E}Hoorayyy! Yayyy! Yayyy!\nOh, thank you, Mr. Sailor!\n\n\n"
+    msg.string += word_wrap_string(
+        "Please take this \\{1A 06 FF 00 00 01}%s\\{1A 06 FF 00 00 00} as a sign of our gratitude. You are soooooo GREAT!" % item_name,
+        max_line_length=43
+    )
+
+    item_name = filter((lambda loc: loc.name == "WindfallBattleSquidSecondPrize"),
+                       locations).__next__().current_item.simple_offset_rep()
+    msg = randomizer.bmg.messages_by_id[7521]
+    msg.string = "\\{1A 05 01 00 8E}Hoorayyy! Yayyy! Yayyy!\nOh, thank you so much, Mr. Sailor!\n\n\n"
+    msg.string += word_wrap_string(
+        "This is our thanks to you! It's been passed down on our island for many years, so don't tell the island elder, OK? Here...\\{1A 06 FF 00 00 01}\\{1A 05 00 00 39} \\{1A 06 FF 00 00 00}Please accept this \\{1A 06 FF 00 00 01}%s\\{1A 06 FF 00 00 00}!" % item_name,
+        max_line_length=43
+    )
+
+    # The high score one doesn't say the item name in text anywhere, so no need to update it.
+    # item_name = self.logic.done_item_locations["Windfall Island - Battlesquid - 20 Shots or Less Prize"]
+    # msg = self.bmg.messages_by_id[7523]
+
+
+def update_item_names_in_letter_advertising_rock_spire_shop(randomizer: 'Randomizer', locations: List[Location]):
+    item_name_1 = filter((lambda loc: loc.name == "RockSpireBeedle500RupeeItem"),
+                         locations).__next__().current_item.simple_offset_rep()
+    item_name_2 = filter((lambda loc: loc.name == "RockSpireBeedle950RupeeItem"),
+                         locations).__next__().current_item.simple_offset_rep()
+    item_name_3 = filter((lambda loc: loc.name == "RockSpireBeedle900RupeeItem"),
+                         locations).__next__().current_item.simple_offset_rep()
+    msg = randomizer.bmg.messages_by_id[3325]
+
+    lines: List[AnyStr] = msg.string.split("\n")
+    unchanged_string_before = "\n".join(lines[0:8]) + "\n"
+    unchanged_string_after = "\n".join(lines[12:])
+
+    hint_string = "Do you have need of %s \\{1A 06 FF 00 00 01}%s\\{1A 06 FF 00 00 00}, %s \\{1A 06 FF 00 00 01}%s\\{1A 06 FF 00 00 00}, or %s \\{1A 06 FF 00 00 01}%s\\{1A 06 FF 00 00 00}? We have them at special bargain prices." % (
+        get_indefinite_article(item_name_1), item_name_1,
+        get_indefinite_article(item_name_2), item_name_2,
+        get_indefinite_article(item_name_3), item_name_3,
+    )
+
+    # Letters have 2 spaces at the start of each line, so word wrap to 39 chars instead of 43, then add 2 spaces to each line.
+    hint_string = word_wrap_string(hint_string, max_line_length=39)
+    hint_string = pad_string_to_next_4_lines(hint_string)
+    hint_lines = hint_string.split("\n")
+    leading_spaces_hint_lines = []
+    for hint_line in hint_lines:
+        if hint_line == "":
+            leading_spaces_hint_lines.append(hint_line)
+        else:
+            leading_spaces_hint_lines.append("  " + hint_line)
+    hint_string = "\n".join(leading_spaces_hint_lines)
+
+    msg.string = unchanged_string_before
+    msg.string += hint_string
+    msg.string += unchanged_string_after
+
+
+def update_savage_labyrinth_hint_tablet(randomizer: 'Randomizer', locations: List[Location]):
+    # Update the tablet on the first floor of savage labyrinth to give hints as to the items inside the labyrinth.
+
+    floor_30_item_name = filter((lambda loc: loc.name == "OutsetSavageFloor30Chest"),
+                                locations).__next__().current_item.simple_offset_rep()
+    floor_50_item_name = filter((lambda loc: loc.name == "OutsetSavageFloor50Chest"),
+                                locations).__next__().current_item.simple_offset_rep()
+
+    floor_30_is_progress = False
+    floor_50_is_progress = False
+
+    floor_30_item_name = get_hint_item_name(floor_30_item_name)
+    floor_50_item_name = get_hint_item_name(floor_50_item_name)
+
+    if floor_30_is_progress and not floor_30_item_name in randomizer.progress_item_hints:
+        raise Exception("Could not find progress item hint for item: %s" % floor_30_item_name)
+    if floor_50_is_progress and not floor_50_item_name in randomizer.progress_item_hints:
+        raise Exception("Could not find progress item hint for item: %s" % floor_50_item_name)
+
+    if floor_30_is_progress and floor_50_is_progress:
+        floor_30_item_hint = randomizer.progress_item_hints[floor_30_item_name]
+        floor_50_item_hint = randomizer.progress_item_hints[floor_50_item_name]
+        hint = "\\{1A 06 FF 00 00 01}%s\\{1A 06 FF 00 00 00}" % floor_30_item_hint
+        hint += " and "
+        hint += "\\{1A 06 FF 00 00 01}%s\\{1A 06 FF 00 00 00}" % floor_50_item_hint
+        hint += " await"
+    elif floor_30_is_progress:
+        floor_30_item_hint = randomizer.progress_item_hints[floor_30_item_name]
+        hint = "\\{1A 06 FF 00 00 01}%s\\{1A 06 FF 00 00 00}" % floor_30_item_hint
+        hint += " and "
+        hint += "challenge"
+        hint += " await"
+    elif floor_50_is_progress:
+        floor_50_item_hint = randomizer.progress_item_hints[floor_50_item_name]
+        hint = "challenge"
+        hint += " and "
+        hint += "\\{1A 06 FF 00 00 01}%s\\{1A 06 FF 00 00 00}" % floor_50_item_hint
+        hint += " await"
     else:
-      leading_spaces_hint_lines.append("  " + hint_line)
-  hint_string = "\n".join(leading_spaces_hint_lines)
-  
-  msg.string = unchanged_string_before
-  msg.string += hint_string
-  msg.string += unchanged_string_after
+        hint = "challenge"
+        hint += " awaits"
+    msg = randomizer.bmg.messages_by_id[837]
+    msg.string = "\\{1A 07 FF 00 01 00 96}\\{1A 06 FF 00 00 01}The Savage Labyrinth\n\\{1A 07 FF 00 01 00 64}\n\n\n"
+    msg.string += word_wrap_string(
+        "\\{1A 06 FF 00 00 00}Deep in the never-ending darkness, the way to %s." % hint,
+        max_line_length=43
+    )
 
-def update_savage_labyrinth_hint_tablet(self, locations: list[Location]):
-  # Update the tablet on the first floor of savage labyrinth to give hints as to the items inside the labyrinth.
 
-  floor_30_item_name = filter((lambda loc: loc.name == "OutsetSavageFloor30Chest"), locations).__next__().current_item.simple_offset_rep()
-  floor_50_item_name = filter((lambda loc: loc.name == "OutsetSavageFloor50Chest"), locations).__next__().current_item.simple_offset_rep()
-  
-  floor_30_is_progress = False
-  floor_50_is_progress = False
-  
-  floor_30_item_name = get_hint_item_name(floor_30_item_name)
-  floor_50_item_name = get_hint_item_name(floor_50_item_name)
-  
-  if floor_30_is_progress and not floor_30_item_name in self.progress_item_hints:
-    raise Exception("Could not find progress item hint for item: %s" % floor_30_item_name)
-  if floor_50_is_progress and not floor_50_item_name in self.progress_item_hints:
-    raise Exception("Could not find progress item hint for item: %s" % floor_50_item_name)
-  
-  if floor_30_is_progress and floor_50_is_progress:
-    floor_30_item_hint = self.progress_item_hints[floor_30_item_name]
-    floor_50_item_hint = self.progress_item_hints[floor_50_item_name]
-    hint = "\\{1A 06 FF 00 00 01}%s\\{1A 06 FF 00 00 00}" % floor_30_item_hint
-    hint += " and "
-    hint += "\\{1A 06 FF 00 00 01}%s\\{1A 06 FF 00 00 00}" % floor_50_item_hint
-    hint += " await"
-  elif floor_30_is_progress:
-    floor_30_item_hint = self.progress_item_hints[floor_30_item_name]
-    hint = "\\{1A 06 FF 00 00 01}%s\\{1A 06 FF 00 00 00}" % floor_30_item_hint
-    hint += " and "
-    hint += "challenge"
-    hint += " await"
-  elif floor_50_is_progress:
-    floor_50_item_hint = self.progress_item_hints[floor_50_item_name]
-    hint = "challenge"
-    hint += " and "
-    hint += "\\{1A 06 FF 00 00 01}%s\\{1A 06 FF 00 00 00}" % floor_50_item_hint
-    hint += " await"
-  else:
-    hint = "challenge"
-    hint += " awaits"
-  msg = self.bmg.messages_by_id[837]
-  msg.string = "\\{1A 07 FF 00 01 00 96}\\{1A 06 FF 00 00 01}The Savage Labyrinth\n\\{1A 07 FF 00 01 00 64}\n\n\n"
-  msg.string += word_wrap_string(
-    "\\{1A 06 FF 00 00 00}Deep in the never-ending darkness, the way to %s." % hint,
-    max_line_length=43
-  )
+def insert_world_id(randomizer: 'Randomizer', world_id: int):
+    randomizer.dol.write_data(write_u8, randomizer.main_custom_symbols["inject_world_id"] + 3, world_id + 1)
 
-def insert_world_id(randomizer, world_id: int):
-  randomizer.dol.write_data(write_u8, randomizer.main_custom_symbols["inject_world_id"] + 3, world_id + 1)
 
-def randomize_and_update_hints(self):
-  hints = []
-  unique_items_given_hint_for = []
-  possible_item_locations = list(self.logic.done_item_locations.keys())
-  self.rng.shuffle(possible_item_locations)
-  num_fishman_hints = 15
-  desired_num_hints = 1 + num_fishman_hints
-  min_num_hints_needed = 1 + 1
-  while True:
-    if not possible_item_locations:
-      if len(hints) >= min_num_hints_needed:
-        break
-      elif len(hints) >= 1:
-        # Succeeded at making at least 1 hint but not enough to reach the minimum.
-        # So duplicate the hint(s) we DID make to fill up the missing slots.
-        unique_hints = hints.copy()
-        while len(hints) < min_num_hints_needed:
-          hints += unique_hints
-        hints = hints[:min_num_hints_needed]
-        break
-      else:
-        raise Exception("No valid items to give hints for")
-    
-    location_name = possible_item_locations.pop()
-    if location_name in self.race_mode_required_locations:
-      # You already know which boss locations have a required item and which don't in race mode by looking at the sea chart.
-      continue
-    if location_name == "Two-Eye Reef - Big Octo Great Fairy":
-      # We don't want this Great Fairy to hint at her own item.
-      continue
-    
-    item_name = self.logic.done_item_locations[location_name]
-    if item_name not in self.logic.all_progress_items:
-      continue
-    if self.logic.is_dungeon_item(item_name) and not self.options.get("keylunacy"):
-      continue
-    
-    item_name = get_hint_item_name(item_name)
-    if item_name == "Bait Bag":
-      # Can't access fishmen hints until you already have the bait bag
-      continue
-    if len(hints) >= desired_num_hints:
-      break
-    
-    zone_name, specific_location_name = self.logic.split_location_name_by_zone(location_name)
-    is_dungeon = "Dungeon" in self.logic.item_locations[location_name]["Types"]
-    is_puzzle_cave = "Puzzle Secret Cave" in self.logic.item_locations[location_name]["Types"]
-    is_combat_cave = "Combat Secret Cave" in self.logic.item_locations[location_name]["Types"]
-    is_savage = "Savage Labyrinth" in self.logic.item_locations[location_name]["Types"]
-    if zone_name in self.dungeon_and_cave_island_locations and (is_dungeon or is_puzzle_cave or is_combat_cave or is_savage):
-      # If the location is in a dungeon or cave, use the hint for whatever island the dungeon/cave is located on.
-      island_name = self.dungeon_and_cave_island_locations[zone_name]
-      island_hint_name = self.island_name_hints[island_name]
-    elif zone_name in self.island_name_hints:
-      island_name = zone_name
-      island_hint_name = self.island_name_hints[island_name]
-    elif zone_name in self.logic.DUNGEON_NAMES.values():
-      continue
-    else:
-      continue
-    
-    if (item_name, island_name) in unique_items_given_hint_for: # Don't give hint for same type of item in same zone
-      continue
-    
-    item_hint_name = self.progress_item_hints[item_name]
-    
-    hints.append((item_hint_name, island_hint_name))
-    
-    unique_items_given_hint_for.append((item_name, island_name))
-    
-  update_big_octo_great_fairy_item_name_hint(self, hints[0])
-  update_fishmen_hints(self, hints[1:])
+def randomize_and_update_hints(randomizer: 'Randomizer'):
+    hints = []
+    unique_items_given_hint_for = []
+    possible_item_locations: List[Location] = list(randomizer.logic.done_item_locations.keys())
+    randomizer.rng.shuffle(possible_item_locations)
+    num_fishman_hints = 15
+    desired_num_hints = 1 + num_fishman_hints
+    min_num_hints_needed = 1 + 1
+    while True:
+        if not possible_item_locations:
+            if len(hints) >= min_num_hints_needed:
+                break
+            elif len(hints) >= 1:
+                # Succeeded at making at least 1 hint but not enough to reach the minimum.
+                # So duplicate the hint(s) we DID make to fill up the missing slots.
+                unique_hints = hints.copy()
+                while len(hints) < min_num_hints_needed:
+                    hints += unique_hints
+                hints = hints[:min_num_hints_needed]
+                break
+            else:
+                raise Exception("No valid items to give hints for")
+
+        location_name = possible_item_locations.pop()
+        if location_name in randomizer.race_mode_required_locations:
+            # You already know which boss locations have a required item and which don't in race mode by looking at the sea chart.
+            continue
+        if location_name == "Two-Eye Reef - Big Octo Great Fairy":
+            # We don't want this Great Fairy to hint at her own item.
+            continue
+
+        item_name = randomizer.logic.done_item_locations[location_name]
+        if item_name not in randomizer.logic.all_progress_items:
+            continue
+        if randomizer.logic.is_dungeon_item(item_name) and not randomizer.options.get("keylunacy"):
+            continue
+
+        item_name = get_hint_item_name(item_name)
+        if item_name == "Bait Bag":
+            # Can't access fishmen hints until you already have the bait bag
+            continue
+        if len(hints) >= desired_num_hints:
+            break
+
+        zone_name, specific_location_name = randomizer.logic.split_location_name_by_zone(location_name)
+        is_dungeon = "Dungeon" in randomizer.logic.item_locations[location_name]["Types"]
+        is_puzzle_cave = "Puzzle Secret Cave" in randomizer.logic.item_locations[location_name]["Types"]
+        is_combat_cave = "Combat Secret Cave" in randomizer.logic.item_locations[location_name]["Types"]
+        is_savage = "Savage Labyrinth" in randomizer.logic.item_locations[location_name]["Types"]
+        if zone_name in randomizer.dungeon_and_cave_island_locations and (
+                is_dungeon or is_puzzle_cave or is_combat_cave or is_savage):
+            # If the location is in a dungeon or cave, use the hint for whatever island the dungeon/cave is located on.
+            island_name = randomizer.dungeon_and_cave_island_locations[zone_name]
+            island_hint_name = randomizer.island_name_hints[island_name]
+        elif zone_name in randomizer.island_name_hints:
+            island_name = zone_name
+            island_hint_name = randomizer.island_name_hints[island_name]
+        elif zone_name in randomizer.logic.DUNGEON_NAMES.values():
+            continue
+        else:
+            continue
+
+        if (
+        item_name, island_name) in unique_items_given_hint_for:  # Don't give hint for same type of item in same zone
+            continue
+
+        item_hint_name = randomizer.progress_item_hints[item_name]
+
+        hints.append((item_hint_name, island_hint_name))
+
+        unique_items_given_hint_for.append((item_name, island_name))
+
+    update_big_octo_great_fairy_item_name_hint(randomizer, hints[0])
+    update_fishmen_hints(randomizer, hints[1:])
+
 
 def get_hint_item_name(item_name):
-  if "TriforceChart" in item_name:
-    return "Triforce Chart"
-  if "TreasureChart" in item_name:
-    return "Treasure Chart"
-  if "SmallKey" in item_name:
-    return "Small Key"
-  if "BigKey" in item_name:
-    return "Big Key"
-  return item_name
+    if "TriforceChart" in item_name:
+        return "Triforce Chart"
+    if "TreasureChart" in item_name:
+        return "Treasure Chart"
+    if "SmallKey" in item_name:
+        return "Small Key"
+    if "BigKey" in item_name:
+        return "Big Key"
+    return item_name
 
-def update_fishmen_hints(self, hints):
-  islands = list(range(1, 49+1))
-  for fishman_hint_number in range(len(islands)):
-    item_hint_name, island_hint_name = hints[fishman_hint_number % len(hints)]
-    
-    fishman_island_number = self.rng.choice(islands)
-    islands.remove(fishman_island_number)
-    
-    hint_lines = []
-    hint_lines.append(
-      "I've heard from my sources that \\{1A 06 FF 00 00 01}%s\\{1A 06 FF 00 00 00} is located in \\{1A 06 FF 00 00 01}%s\\{1A 06 FF 00 00 00}." % (item_hint_name, island_hint_name)
+
+def update_fishmen_hints(randomizer: 'Randomizer', hints):
+    islands = list(range(1, 49 + 1))
+    for fishman_hint_number in range(len(islands)):
+        item_hint_name, island_hint_name = hints[fishman_hint_number % len(hints)]
+
+        fishman_island_number = randomizer.rng.choice(islands)
+        islands.remove(fishman_island_number)
+
+        hint_lines = [
+            "I've heard from my sources that \\{1A 06 FF 00 00 01}%s\\{1A 06 FF 00 00 00} is located in \\{1A 06 FF 00 00 01}%s\\{1A 06 FF 00 00 00}." % (
+                item_hint_name, island_hint_name)]
+        # Add a two-second wait command (delay) to prevent the player from skipping over the hint accidentally.
+        hint_lines[-1] += "\\{1A 07 00 00 07 00 3C}"
+
+        hint_lines.append("Could be worth a try checking that place out. If you know where it is, of course.")
+        if randomizer.options.get("instant_text_boxes"):
+            # If instant text mode is on, we need to reset the text speed to instant after the wait command messed it up.
+            hint_lines[-1] = "\\{1A 05 00 00 01}" + hint_lines[-1]
+
+        hint = ""
+        for hint_line in hint_lines:
+            hint_line = word_wrap_string(hint_line)
+            hint_line = pad_string_to_next_4_lines(hint_line)
+            hint += hint_line
+
+        msg_id = 13026 + fishman_island_number
+        msg = randomizer.bmg.messages_by_id[msg_id]
+        msg.string = hint
+
+
+def update_big_octo_great_fairy_item_name_hint(randomizer: 'Randomizer', hint):
+    item_hint_name, island_hint_name = hint
+    randomizer.bmg.messages_by_id[12015].string = word_wrap_string(
+        "\\{1A 06 FF 00 00 05}In \\{1A 06 FF 00 00 01}%s\\{1A 06 FF 00 00 05}, you will find an item." % island_hint_name,
+        max_line_length=43
     )
-    # Add a two-second wait command (delay) to prevent the player from skipping over the hint accidentally.
-    hint_lines[-1] += "\\{1A 07 00 00 07 00 3C}"
-    
-    hint_lines.append("Could be worth a try checking that place out. If you know where it is, of course.")
-    if self.options.get("instant_text_boxes"):
-      # If instant text mode is on, we need to reset the text speed to instant after the wait command messed it up.
-      hint_lines[-1] = "\\{1A 05 00 00 01}" + hint_lines[-1]
-    
-    hint = ""
-    for hint_line in hint_lines:
-      hint_line = word_wrap_string(hint_line)
-      hint_line = pad_string_to_next_4_lines(hint_line)
-      hint += hint_line
-    
-    msg_id = 13026 + fishman_island_number
-    msg = self.bmg.messages_by_id[msg_id]
-    msg.string = hint
+    randomizer.bmg.messages_by_id[12016].string = word_wrap_string(
+        "\\{1A 06 FF 00 00 05}...\\{1A 06 FF 00 00 01}%s\\{1A 06 FF 00 00 05} which may help you on your quest." % upper_first_letter(
+            item_hint_name),
+        max_line_length=43
+    )
+    randomizer.bmg.messages_by_id[12017].string = word_wrap_string(
+        "\\{1A 06 FF 00 00 05}When you find you have need of such an item, you must journey to that place.",
+        max_line_length=43
+    )
 
-def update_big_octo_great_fairy_item_name_hint(self, hint):
-  item_hint_name, island_hint_name = hint
-  self.bmg.messages_by_id[12015].string = word_wrap_string(
-    "\\{1A 06 FF 00 00 05}In \\{1A 06 FF 00 00 01}%s\\{1A 06 FF 00 00 05}, you will find an item." % island_hint_name,
-    max_line_length=43
-  )
-  self.bmg.messages_by_id[12016].string = word_wrap_string(
-    "\\{1A 06 FF 00 00 05}...\\{1A 06 FF 00 00 01}%s\\{1A 06 FF 00 00 05} which may help you on your quest." % upper_first_letter(item_hint_name),
-    max_line_length=43
-  )
-  self.bmg.messages_by_id[12017].string = word_wrap_string(
-    "\\{1A 06 FF 00 00 05}When you find you have need of such an item, you must journey to that place.",
-    max_line_length=43
-  )
 
-def shorten_zephos_event(self):
-  # Make the Zephos event end when the player gets the item from the shrine, before Zephos actually appears.
-  
-  event_list = self.get_arc("files/res/Stage/sea/Stage.arc").get_file("event_list.dat")
-  wind_shrine_event = event_list.events_by_name["TACT_HT"]
-  zephos = next(actor for actor in wind_shrine_event.actors if actor.name == "Hr")
-  link = next(actor for actor in wind_shrine_event.actors if actor.name == "Link")
-  camera = next(actor for actor in wind_shrine_event.actors if actor.name == "CAMERA")
-  
-  zephos.actions = zephos.actions[0:7]
-  link.actions = link.actions[0:7]
-  camera.actions = camera.actions[0:5]
-  wind_shrine_event.ending_flags = [
-    zephos.actions[-1].flag_id_to_set,
-    link.actions[-1].flag_id_to_set,
-    camera.actions[-1].flag_id_to_set,
-  ]
+def shorten_zephos_event(randomizer: 'Randomizer'):
+    # Make the Zephos event end when the player gets the item from the shrine, before Zephos actually appears.
 
-def update_korl_dialogue(self):
-  msg = self.bmg.messages_by_id[3443]
-  msg.string = "\\{1A 05 00 00 00}, the sea is all yours.\n"
-  msg.string += "Make sure you explore every corner\n"
-  msg.string += "in search of items to help you. Remember\n"
-  msg.string += "that your quest is to defeat Ganondorf."
+    event_list = randomizer.get_arc("files/res/Stage/sea/Stage.arc").get_file("event_list.dat")
+    wind_shrine_event = event_list.events_by_name["TACT_HT"]
+    zephos = next(actor for actor in wind_shrine_event.actors if actor.name == "Hr")
+    link = next(actor for actor in wind_shrine_event.actors if actor.name == "Link")
+    camera = next(actor for actor in wind_shrine_event.actors if actor.name == "CAMERA")
 
-def set_num_starting_triforce_shards(self):
-  num_starting_triforce_shards = int(self.options.get("num_starting_triforce_shards", 0))
-  num_shards_address = self.main_custom_symbols["num_triforce_shards_to_start_with"]
-  self.dol.write_data(write_u8, num_shards_address, num_starting_triforce_shards)
+    zephos.actions = zephos.actions[0:7]
+    link.actions = link.actions[0:7]
+    camera.actions = camera.actions[0:5]
+    wind_shrine_event.ending_flags = [
+        zephos.actions[-1].flag_id_to_set,
+        link.actions[-1].flag_id_to_set,
+        camera.actions[-1].flag_id_to_set,
+    ]
 
-def set_starting_health(self):
-  heart_pieces = self.options.get("starting_pohs")
-  heart_containers = self.options.get("starting_hcs") * 4
-  base_health = 12
 
-  starting_health = base_health + heart_containers + heart_pieces
-  
-  starting_quarter_hearts_address = self.main_custom_symbols["starting_quarter_hearts"]
+def update_korl_dialogue(randomizer: 'Randomizer'):
+    msg = randomizer.bmg.messages_by_id[3443]
+    msg.string = "\\{1A 05 00 00 00}, the sea is all yours.\n"
+    msg.string += "Make sure you explore every corner\n"
+    msg.string += "in search of items to help you. Remember\n"
+    msg.string += "that your quest is to defeat Ganondorf."
 
-  self.dol.write_data(write_u16, starting_quarter_hearts_address, starting_health)
 
-def give_double_magic(self):
-  starting_magic_address = self.main_custom_symbols["starting_magic"]
-  self.dol.write_data(write_u8, starting_magic_address, 32)
+def set_num_starting_triforce_shards(randomizer: 'Randomizer'):
+    num_starting_triforce_shards = int(randomizer.options.get("num_starting_triforce_shards", 0))
+    num_shards_address = randomizer.main_custom_symbols["num_triforce_shards_to_start_with"]
+    randomizer.dol.write_data(write_u8, num_shards_address, num_starting_triforce_shards)
 
-def add_pirate_ship_to_windfall(self):
-  windfall_dzr = self.get_arc("files/res/Stage/sea/Room11.arc").get_file("room.dzr")
-  ship_dzr = self.get_arc("files/res/Stage/Asoko/Room0.arc").get_file("room.dzr")
-  ship_dzs = self.get_arc("files/res/Stage/Asoko/Stage.arc").get_file("stage.dzs")
-  event_list = self.get_arc("files/res/Stage/Asoko/Stage.arc").get_file("event_list.dat")
-  
-  windfall_layer_2_actors = windfall_dzr.entries_by_type_and_layer("ACTR", 2)
-  layer_2_pirate_ship = next(x for x in windfall_layer_2_actors if x.name == "Pirates")
-  
-  default_layer_pirate_ship = windfall_dzr.add_entity("ACTR", layer=None)
-  default_layer_pirate_ship.name = layer_2_pirate_ship.name
-  default_layer_pirate_ship.params = layer_2_pirate_ship.params
-  default_layer_pirate_ship.x_pos = layer_2_pirate_ship.x_pos
-  default_layer_pirate_ship.y_pos = layer_2_pirate_ship.y_pos
-  default_layer_pirate_ship.z_pos = layer_2_pirate_ship.z_pos
-  default_layer_pirate_ship.x_rot = layer_2_pirate_ship.x_rot
-  default_layer_pirate_ship.y_rot = layer_2_pirate_ship.y_rot
-  default_layer_pirate_ship.z_rot = layer_2_pirate_ship.z_rot
-  default_layer_pirate_ship.enemy_number = layer_2_pirate_ship.enemy_number
-  
-  # Change the door to not require a password.
-  default_layer_pirate_ship.pirate_ship_door_type = 0
-  
-  windfall_dzr.save_changes()
-  
-  # Remove Niko from the ship to get rid of his events.
-  for layer_num in [2, 3]:
-    actors_on_this_layer = ship_dzr.entries_by_type_and_layer("ACTR", layer_num)
-    niko = next(x for x in actors_on_this_layer if x.name == "P2b")
-    ship_dzr.remove_entity(niko, "ACTR", layer=layer_num)
-  
-  # Add Aryll to the ship instead.
-  aryll = ship_dzr.add_entity("ACTR", layer=None)
-  aryll.name = "Ls1"
-  aryll.which_aryll = 0 # Looking out of her lookout (though we change her animation to just stand there via asm).
-  aryll.x_pos = 600
-  aryll.y_pos = -550
-  aryll.z_pos = -200
-  aryll.y_rot = 0xC000
-  
-  # Change Aryll's text when you talk to her.
-  msg = self.bmg.messages_by_id[3008]
-  #msg.initial_sound = 1 # "Ah!"
-  #msg.initial_sound = 2 # "Wah!?"
-  #msg.initial_sound = 7 # "Auhh!?"
-  #msg.initial_sound = 95 # "Hai!"
-  #msg.initial_sound = 104 # "Oyyyy!"
-  #msg.initial_sound = 105 # "Hoyyyy!"
-  msg.initial_sound = 106 # "Haiiii~!"
-  msg.string = "'Hoy! Big Brother!\n"
-  msg.string += "Wanna play a game? It's fun, trust me!"
-  msg.string = pad_string_to_next_4_lines(msg.string)
-  msg.string += word_wrap_string("Just \\{1A 06 FF 00 00 01}step on this button\\{1A 06 FF 00 00 00}, and try to swing across the ropes to reach that door over there before time's up!", max_line_length=43)
-  
-  # We need to make the pirate ship stage (Asoko) load the wave bank with Aryll's voice in it.
-  stage_bgm_info_list_start = 0x8039C30C
-  second_dynamic_scene_waves_list_start = 0x8039C2E4
-  asoko_spot_id = 0xC
-  new_second_scene_wave_index = 0x0E # Second dynamic scene wave indexes 0E-13 are unused free slots, so we use one of them.
-  isle_link_0_aw_index = 0x19 # The index of IsleLink_0.aw, the wave bank containing Aryll's voice.
-  
-  asoko_bgm_info_ptr = stage_bgm_info_list_start + asoko_spot_id*4
-  new_second_scene_wave_ptr = second_dynamic_scene_waves_list_start + new_second_scene_wave_index*2
-  self.dol.write_data(write_u8, asoko_bgm_info_ptr+3, new_second_scene_wave_index)
-  self.dol.write_data(write_u8, new_second_scene_wave_ptr+0, isle_link_0_aw_index)
-  
-  
-  # Add a custom event where Aryll notices if the player got trapped in the chest room after the timer ran out and opens the door for them.
-  
-  event = event_list.add_event("AryllOpensDoor")
-  
-  camera = event.add_actor("CAMERA")
-  camera.staff_type = 2
-  
-  aryll_actor = event.add_actor("Ls1")
-  aryll_actor.staff_type = 0
-  
-  link = event.add_actor("Link")
-  link.staff_type = 0
-  
-  act = camera.add_action("FIXEDFRM", properties=[
-    ("Eye", (aryll.x_pos, aryll.y_pos+90, aryll.z_pos-120)),
-    ("Center", (aryll.x_pos, aryll.y_pos+70, aryll.z_pos)),
-    ("Fovy", 60.0),
-    ("Timer", 30),
-  ])
-  
-  # Make Aryll look at the player.
-  act = aryll_actor.add_action("LOK_PLYER", properties=[
-    ("prm_0", 8),
-  ])
-  
-  # Some of Aryll's animations that can be used here (incomplete list):
-  # 2: Arms behind back, lightly moving body
-  # 4: Arms behind back, swaying head back and forth
-  # 5: Idle
-  # 6: Giving present
-  # 8: Looking through telescope
-  # 9: Item get anim
-  act = aryll_actor.add_action("ANM_CHG", properties=[
-    ("AnmNo", 8), # Looking through telescope
-  ])
-  
-  act = aryll_actor.add_action("WAIT", properties=[
-    ("Timer", 30),
-  ])
-  
-  # Set Aryll's text for when you're trapped in the chest room.
-  new_message_id = 849
-  msg = self.bmg.add_new_message(new_message_id)
-  msg.text_box_type = 0 # Dialog
-  msg.initial_draw_type = 0 # Normal
-  msg.text_alignment = 4 # Bottom text box
-  msg.string = "Oh! Did you get stuck in there, Big Brother?"
-  
-  act = aryll_actor.add_action("TALK_MSG", properties=[
-    ("msg_num", new_message_id),
-  ])
-  
-  act = aryll_actor.add_action("ANM_CHG", properties=[
-    ("AnmNo", 4), # Arms behind back, swaying head back and forth
-  ])
-  
-  new_message_id = 850
-  msg = self.bmg.add_new_message(new_message_id)
-  msg.text_box_type = 0 # Dialog
-  msg.initial_draw_type = 0 # Normal
-  msg.text_alignment = 4 # Bottom text box
-  msg.string = "Don't worry, I'll open the door for you."
-  
-  act = aryll_actor.add_action("TALK_MSG", properties=[
-    ("msg_num", new_message_id),
-  ])
-  
-  # Reset Aryll to her idle animation at the end of the event.
-  act = aryll_actor.add_action("ANM_CHG", properties=[
-    ("AnmNo", 5), # Idle
-  ])
-  
-  # Make sure Link still animates during the event instead of freezing.
-  act = link.add_action("001wait")
-  
-  event.ending_flags[0] = aryll_actor.actions[-1].flag_id_to_set
-  
-  event_list.save_changes()
-  
-  new_evnt = ship_dzs.add_entity("EVNT")
-  new_evnt.name = event.name
-  new_event_index_in_evnt = ship_dzs.entries_by_type("EVNT").index(new_evnt)
-  
-  
-  # Change the facial animation used by Aryll animation 4 (arms behind back, swaying back and forth) to be 5 (smug expression).
-  aryll_rel = self.get_rel("files/rels/d_a_npc_ls1.rel")
-  aryll_rel.write_data(write_u8, 0x5D18 + 4*0x10 + 1, 5)
-  
-  
-  # Now that we have a custom event, we must actually detect when the player is trapped in the chest room and trigger it.
-  # To do this, we use a custom switch logic operator actor.
-  
-  # Set up the switches we will use.
-  countdown_happening_switch = 0xC0
-  aryll_opened_door_switch = 0xC1
-  countdown_not_happening_switch = 0xC2
-  inside_chest_room_switch = 0xC3
-  door_should_be_open_switch = 0xC4
-  
-  
-  # Detect when the player is inside the chest room.
-  swc00 = ship_dzr.add_entity("SCOB", layer=None)
-  swc00.name = "SW_C00"
-  swc00.switch_to_set = inside_chest_room_switch
-  swc00.behavior_type = 0 # Unset the switch when leaving the region
-  swc00.prerequisite_switch = 0xFF
-  swc00.x_pos = 0
-  swc00.y_pos = -550
-  swc00.z_pos = -3900
-  swc00.scale_x = 64
-  swc00.scale_y = 36
-  swc00.scale_z = 64
-  
-  
-  # Detect when the countdown is not currently going on.
-  sw_op = ship_dzr.add_entity("ACTR")
-  sw_op.name = "SwOp"
-  sw_op.operation = 3 # NOR
-  sw_op.is_continuous = 1
-  sw_op.num_switches_to_check = 1
-  sw_op.first_switch_to_check = countdown_happening_switch
-  sw_op.switch_to_set = countdown_not_happening_switch
-  sw_op.evnt_index = 0xFF
-  sw_op.x_pos = 0
-  sw_op.y_pos = 0
-  sw_op.z_pos = -4400
-  
-  
-  # Handle starting the event for Aryll noticing the player is trapped.
-  sw_op = ship_dzr.add_entity("ACTR")
-  sw_op.name = "SwOp"
-  sw_op.operation = 0 # AND
-  sw_op.is_continuous = 1
-  sw_op.num_switches_to_check = 2
-  sw_op.first_switch_to_check = countdown_not_happening_switch # && inside_chest_room_switch
-  sw_op.switch_to_set = aryll_opened_door_switch
-  sw_op.evnt_index = new_event_index_in_evnt
-  sw_op.delay = 150
-  sw_op.x_pos = 0
-  sw_op.y_pos = 0
-  sw_op.z_pos = -3900
-  
-  
-  # Handle opening the door.
-  sw_op = ship_dzr.add_entity("ACTR")
-  sw_op.name = "SwOp"
-  sw_op.operation = 2 # OR
-  sw_op.is_continuous = 1
-  sw_op.num_switches_to_check = 2
-  sw_op.first_switch_to_check = countdown_happening_switch # || aryll_opened_door_switch
-  sw_op.switch_to_set = door_should_be_open_switch
-  sw_op.evnt_index = 0xFF
-  sw_op.x_pos = 0
-  sw_op.y_pos = 0
-  sw_op.z_pos = -3400
-  for layer_num in [2, 3]:
-    actors_on_this_layer = ship_dzr.entries_by_type_and_layer("ACTR", layer_num)
-    ashut = next(x for x in actors_on_this_layer if x.name == "Ashut")
-    ashut.switch_to_check = door_should_be_open_switch
-  
-  
-  ship_dzr.save_changes()
-  ship_dzs.save_changes()
+
+def set_starting_health(randomizer: 'Randomizer'):
+    heart_pieces = randomizer.options.get("starting_pohs")
+    heart_containers = randomizer.options.get("starting_hcs") * 4
+    base_health = 12
+
+    starting_health = base_health + heart_containers + heart_pieces
+
+    starting_quarter_hearts_address = randomizer.main_custom_symbols["starting_quarter_hearts"]
+
+    randomizer.dol.write_data(write_u16, starting_quarter_hearts_address, starting_health)
+
+
+def give_double_magic(randomizer: 'Randomizer'):
+    starting_magic_address = randomizer.main_custom_symbols["starting_magic"]
+    randomizer.dol.write_data(write_u8, starting_magic_address, 32)
+
+
+def add_pirate_ship_to_windfall(randomizer: 'Randomizer'):
+    windfall_dzr = randomizer.get_arc("files/res/Stage/sea/Room11.arc").get_file("room.dzr")
+    ship_dzr = randomizer.get_arc("files/res/Stage/Asoko/Room0.arc").get_file("room.dzr")
+    ship_dzs = randomizer.get_arc("files/res/Stage/Asoko/Stage.arc").get_file("stage.dzs")
+    event_list = randomizer.get_arc("files/res/Stage/Asoko/Stage.arc").get_file("event_list.dat")
+
+    windfall_layer_2_actors = windfall_dzr.entries_by_type_and_layer("ACTR", 2)
+    layer_2_pirate_ship = next(x for x in windfall_layer_2_actors if x.name == "Pirates")
+
+    default_layer_pirate_ship = windfall_dzr.add_entity("ACTR", layer=None)
+    default_layer_pirate_ship.name = layer_2_pirate_ship.name
+    default_layer_pirate_ship.params = layer_2_pirate_ship.params
+    default_layer_pirate_ship.x_pos = layer_2_pirate_ship.x_pos
+    default_layer_pirate_ship.y_pos = layer_2_pirate_ship.y_pos
+    default_layer_pirate_ship.z_pos = layer_2_pirate_ship.z_pos
+    default_layer_pirate_ship.x_rot = layer_2_pirate_ship.x_rot
+    default_layer_pirate_ship.y_rot = layer_2_pirate_ship.y_rot
+    default_layer_pirate_ship.z_rot = layer_2_pirate_ship.z_rot
+    default_layer_pirate_ship.enemy_number = layer_2_pirate_ship.enemy_number
+
+    # Change the door to not require a password.
+    default_layer_pirate_ship.pirate_ship_door_type = 0
+
+    windfall_dzr.save_changes()
+
+    # Remove Niko from the ship to get rid of his events.
+    for layer_num in [2, 3]:
+        actors_on_this_layer = ship_dzr.entries_by_type_and_layer("ACTR", layer_num)
+        niko = next(x for x in actors_on_this_layer if x.name == "P2b")
+        ship_dzr.remove_entity(niko, "ACTR", layer=layer_num)
+
+    # Add Aryll to the ship instead.
+    aryll = ship_dzr.add_entity("ACTR", layer=None)
+    aryll.name = "Ls1"
+    aryll.which_aryll = 0  # Looking out of her lookout (though we change her animation to just stand there via asm).
+    aryll.x_pos = 600
+    aryll.y_pos = -550
+    aryll.z_pos = -200
+    aryll.y_rot = 0xC000
+
+    # Change Aryll's text when you talk to her.
+    msg = randomizer.bmg.messages_by_id[3008]
+    # msg.initial_sound = 1 # "Ah!"
+    # msg.initial_sound = 2 # "Wah!?"
+    # msg.initial_sound = 7 # "Auhh!?"
+    # msg.initial_sound = 95 # "Hai!"
+    # msg.initial_sound = 104 # "Oyyyy!"
+    # msg.initial_sound = 105 # "Hoyyyy!"
+    msg.initial_sound = 106  # "Haiiii~!"
+    msg.string = "'Hoy! Big Brother!\n"
+    msg.string += "Wanna play a game? It's fun, trust me!"
+    msg.string = pad_string_to_next_4_lines(msg.string)
+    msg.string += word_wrap_string(
+        "Just \\{1A 06 FF 00 00 01}step on this button\\{1A 06 FF 00 00 00}, and try to swing across the ropes to reach that door over there before time's up!",
+        max_line_length=43)
+
+    # We need to make the pirate ship stage (Asoko) load the wave bank with Aryll's voice in it.
+    stage_bgm_info_list_start = 0x8039C30C
+    second_dynamic_scene_waves_list_start = 0x8039C2E4
+    asoko_spot_id = 0xC
+    new_second_scene_wave_index = 0x0E  # Second dynamic scene wave indexes 0E-13 are unused free slots, so we use one of them.
+    isle_link_0_aw_index = 0x19  # The index of IsleLink_0.aw, the wave bank containing Aryll's voice.
+
+    asoko_bgm_info_ptr = stage_bgm_info_list_start + asoko_spot_id * 4
+    new_second_scene_wave_ptr = second_dynamic_scene_waves_list_start + new_second_scene_wave_index * 2
+    randomizer.dol.write_data(write_u8, asoko_bgm_info_ptr + 3, new_second_scene_wave_index)
+    randomizer.dol.write_data(write_u8, new_second_scene_wave_ptr + 0, isle_link_0_aw_index)
+
+    # Add a custom event where Aryll notices if the player got trapped in the chest room after the timer ran out and opens the door for them.
+
+    event = event_list.add_event("AryllOpensDoor")
+
+    camera = event.add_actor("CAMERA")
+    camera.staff_type = 2
+
+    aryll_actor = event.add_actor("Ls1")
+    aryll_actor.staff_type = 0
+
+    link = event.add_actor("Link")
+    link.staff_type = 0
+
+    act = camera.add_action("FIXEDFRM", properties=[
+        ("Eye", (aryll.x_pos, aryll.y_pos + 90, aryll.z_pos - 120)),
+        ("Center", (aryll.x_pos, aryll.y_pos + 70, aryll.z_pos)),
+        ("Fovy", 60.0),
+        ("Timer", 30),
+    ])
+
+    # Make Aryll look at the player.
+    act = aryll_actor.add_action("LOK_PLYER", properties=[
+        ("prm_0", 8),
+    ])
+
+    # Some of Aryll's animations that can be used here (incomplete list):
+    # 2: Arms behind back, lightly moving body
+    # 4: Arms behind back, swaying head back and forth
+    # 5: Idle
+    # 6: Giving present
+    # 8: Looking through telescope
+    # 9: Item get anim
+    act = aryll_actor.add_action("ANM_CHG", properties=[
+        ("AnmNo", 8),  # Looking through telescope
+    ])
+
+    act = aryll_actor.add_action("WAIT", properties=[
+        ("Timer", 30),
+    ])
+
+    # Set Aryll's text for when you're trapped in the chest room.
+    new_message_id = 849
+    msg = randomizer.bmg.add_new_message(new_message_id)
+    msg.text_box_type = 0  # Dialog
+    msg.initial_draw_type = 0  # Normal
+    msg.text_alignment = 4  # Bottom text box
+    msg.string = "Oh! Did you get stuck in there, Big Brother?"
+
+    act = aryll_actor.add_action("TALK_MSG", properties=[
+        ("msg_num", new_message_id),
+    ])
+
+    act = aryll_actor.add_action("ANM_CHG", properties=[
+        ("AnmNo", 4),  # Arms behind back, swaying head back and forth
+    ])
+
+    new_message_id = 850
+    msg = randomizer.bmg.add_new_message(new_message_id)
+    msg.text_box_type = 0  # Dialog
+    msg.initial_draw_type = 0  # Normal
+    msg.text_alignment = 4  # Bottom text box
+    msg.string = "Don't worry, I'll open the door for you."
+
+    act = aryll_actor.add_action("TALK_MSG", properties=[
+        ("msg_num", new_message_id),
+    ])
+
+    # Reset Aryll to her idle animation at the end of the event.
+    act = aryll_actor.add_action("ANM_CHG", properties=[
+        ("AnmNo", 5),  # Idle
+    ])
+
+    # Make sure Link still animates during the event instead of freezing.
+    act = link.add_action("001wait")
+
+    event.ending_flags[0] = aryll_actor.actions[-1].flag_id_to_set
+
+    event_list.save_changes()
+
+    new_evnt = ship_dzs.add_entity("EVNT")
+    new_evnt.name = event.name
+    new_event_index_in_evnt = ship_dzs.entries_by_type("EVNT").index(new_evnt)
+
+    # Change the facial animation used by Aryll animation 4 (arms behind back, swaying back and forth) to be 5 (smug expression).
+    aryll_rel = randomizer.get_rel("files/rels/d_a_npc_ls1.rel")
+    aryll_rel.write_data(write_u8, 0x5D18 + 4 * 0x10 + 1, 5)
+
+    # Now that we have a custom event, we must actually detect when the player is trapped in the chest room and trigger it.
+    # To do this, we use a custom switch logic operator actor.
+
+    # Set up the switches we will use.
+    countdown_happening_switch = 0xC0
+    aryll_opened_door_switch = 0xC1
+    countdown_not_happening_switch = 0xC2
+    inside_chest_room_switch = 0xC3
+    door_should_be_open_switch = 0xC4
+
+    # Detect when the player is inside the chest room.
+    swc00 = ship_dzr.add_entity("SCOB", layer=None)
+    swc00.name = "SW_C00"
+    swc00.switch_to_set = inside_chest_room_switch
+    swc00.behavior_type = 0  # Unset the switch when leaving the region
+    swc00.prerequisite_switch = 0xFF
+    swc00.x_pos = 0
+    swc00.y_pos = -550
+    swc00.z_pos = -3900
+    swc00.scale_x = 64
+    swc00.scale_y = 36
+    swc00.scale_z = 64
+
+    # Detect when the countdown is not currently going on.
+    sw_op = ship_dzr.add_entity("ACTR")
+    sw_op.name = "SwOp"
+    sw_op.operation = 3  # NOR
+    sw_op.is_continuous = 1
+    sw_op.num_switches_to_check = 1
+    sw_op.first_switch_to_check = countdown_happening_switch
+    sw_op.switch_to_set = countdown_not_happening_switch
+    sw_op.evnt_index = 0xFF
+    sw_op.x_pos = 0
+    sw_op.y_pos = 0
+    sw_op.z_pos = -4400
+
+    # Handle starting the event for Aryll noticing the player is trapped.
+    sw_op = ship_dzr.add_entity("ACTR")
+    sw_op.name = "SwOp"
+    sw_op.operation = 0  # AND
+    sw_op.is_continuous = 1
+    sw_op.num_switches_to_check = 2
+    sw_op.first_switch_to_check = countdown_not_happening_switch  # && inside_chest_room_switch
+    sw_op.switch_to_set = aryll_opened_door_switch
+    sw_op.evnt_index = new_event_index_in_evnt
+    sw_op.delay = 150
+    sw_op.x_pos = 0
+    sw_op.y_pos = 0
+    sw_op.z_pos = -3900
+
+    # Handle opening the door.
+    sw_op = ship_dzr.add_entity("ACTR")
+    sw_op.name = "SwOp"
+    sw_op.operation = 2  # OR
+    sw_op.is_continuous = 1
+    sw_op.num_switches_to_check = 2
+    sw_op.first_switch_to_check = countdown_happening_switch  # || aryll_opened_door_switch
+    sw_op.switch_to_set = door_should_be_open_switch
+    sw_op.evnt_index = 0xFF
+    sw_op.x_pos = 0
+    sw_op.y_pos = 0
+    sw_op.z_pos = -3400
+    for layer_num in [2, 3]:
+        actors_on_this_layer = ship_dzr.entries_by_type_and_layer("ACTR", layer_num)
+        ashut = next(x for x in actors_on_this_layer if x.name == "Ashut")
+        ashut.switch_to_check = door_should_be_open_switch
+
+    ship_dzr.save_changes()
+    ship_dzs.save_changes()
 
 
 CyclicWarpPotData = namedtuple("CyclicWarpPotData", 'stage_name room_num x y z y_rot event_reg_index')
 INTER_DUNGEON_WARP_DATA = [
-  [
-    CyclicWarpPotData("M_NewD2", 2, 2185, 0, 590, 0xA000, 2), # DRC
-    CyclicWarpPotData("kindan", 1, 986, 3956.43, 9588, 0xB929, 2), # FW
-    CyclicWarpPotData("Siren", 6, 277, 229.42, -6669, 0xC000, 2), # TotG
-  ],
-  [
-    CyclicWarpPotData("ma2room", 2, 1556, 728.46, -7091, 0xEAA6, 5), # FF
-    CyclicWarpPotData("M_Dai", 1, -8010, 1010, -1610, 0, 5), # ET
-    CyclicWarpPotData("kaze", 3, -4333, 1100, 48, 0x4000, 5), # WT
-  ],
+    [
+        CyclicWarpPotData("M_NewD2", 2, 2185, 0, 590, 0xA000, 2),  # DRC
+        CyclicWarpPotData("kindan", 1, 986, 3956.43, 9588, 0xB929, 2),  # FW
+        CyclicWarpPotData("Siren", 6, 277, 229.42, -6669, 0xC000, 2),  # TotG
+    ],
+    [
+        CyclicWarpPotData("ma2room", 2, 1556, 728.46, -7091, 0xEAA6, 5),  # FF
+        CyclicWarpPotData("M_Dai", 1, -8010, 1010, -1610, 0, 5),  # ET
+        CyclicWarpPotData("kaze", 3, -4333, 1100, 48, 0x4000, 5),  # WT
+    ],
 ]
 
-def add_inter_dungeon_warp_pots(self):
-  for warp_pot_datas_in_this_cycle in INTER_DUNGEON_WARP_DATA:
-    for warp_pot_index, warp_pot_data in enumerate(warp_pot_datas_in_this_cycle):
-      room_arc_path = "files/res/Stage/%s/Room%d.arc" % (warp_pot_data.stage_name, warp_pot_data.room_num)
-      stage_arc_path = "files/res/Stage/%s/Stage.arc" % warp_pot_data.stage_name
-      room_dzx = self.get_arc(room_arc_path).get_file("room.dzr")
-      stage_dzx = self.get_arc(stage_arc_path).get_file("stage.dzs")
-      
-      # Add new player spawn locations.
-      if warp_pot_data.stage_name in ["M_Dai", "kaze"]:
-        # Earth and Wind temple spawns must be in the stage instead of the room or the game will crash. Not sure why.
-        dzx_for_spawn = stage_dzx
-      else:
-        dzx_for_spawn = room_dzx
-      spawn = dzx_for_spawn.add_entity("PLYR", layer=None)
-      spawn.spawn_type = 7 # Flying out of a warp pot
-      spawn.room_num = warp_pot_data.room_num
-      spawn.x_pos = warp_pot_data.x
-      spawn.y_pos = warp_pot_data.y
-      spawn.z_pos = warp_pot_data.z
-      spawn.y_rot = warp_pot_data.y_rot
-      spawn.spawn_id = 69
-      
-      # Ensure there wasn't already a spawn using the ID we chose, just to be safe.
-      spawns = dzx_for_spawn.entries_by_type("PLYR")
-      spawn_id_69s = [x for x in spawns if x.spawn_id == 69]
-      assert len(spawn_id_69s) == 1
-      
-      # Add new exits.
-      pot_index_to_exit_index = []
-      for other_warp_pot_data in warp_pot_datas_in_this_cycle:
-        scls_exit = room_dzx.add_entity("SCLS", layer=None)
-        scls_exit.dest_stage_name = other_warp_pot_data.stage_name
-        scls_exit.spawn_id = 69
-        scls_exit.room_index = other_warp_pot_data.room_num
-        scls_exit.fade_type = 4 # Warp pot fade out
-        pot_index_to_exit_index.append(len(room_dzx.entries_by_type("SCLS"))-1)
-      
-      # Add the warp pots themselves.
-      warp_pot = room_dzx.add_entity("ACTR", layer=None)
-      warp_pot.name = "Warpts%d" % (warp_pot_index+1) # Warpts1 Warpts2 or Warpts3
-      warp_pot.type = warp_pot_index + 2 # 2 3 or 4
-      warp_pot.cyclic_event_reg_index = warp_pot_data.event_reg_index
-      warp_pot.cyclic_dest_1_exit = pot_index_to_exit_index[0]
-      warp_pot.cyclic_dest_2_exit = pot_index_to_exit_index[1]
-      warp_pot.cyclic_dest_3_exit = pot_index_to_exit_index[2]
-      warp_pot.x_pos = warp_pot_data.x
-      warp_pot.y_pos = warp_pot_data.y
-      warp_pot.z_pos = warp_pot_data.z
-      warp_pot.y_rot = warp_pot_data.y_rot
-      warp_pot.x_rot = 0xFFFF
-      warp_pot.z_rot = 0xFFFF
-      
-      room_dzx.save_changes()
-      stage_dzx.save_changes()
-  
-  # We also need to copy the particles used by the warp pots into the FF and TotG particle banks.
-  # Without this the warp pots would have no particles, and the game would crash on real hardware.
-  drc_jpc = self.get_jpc("files/res/Particle/Pscene035.jpc")
-  totg_jpc = self.get_jpc("files/res/Particle/Pscene050.jpc")
-  ff_jpc = self.get_jpc("files/res/Particle/Pscene043.jpc")
-  
-  for particle_id in [0x8161, 0x8162, 0x8165, 0x8166, 0x8112]:
-    particle = drc_jpc.particles_by_id[particle_id]
-    
-    for dest_jpc in [totg_jpc, ff_jpc]:
-      copied_particle = copy.deepcopy(particle)
-      dest_jpc.add_particle(copied_particle)
-      
-      for texture_filename in copied_particle.tdb1.texture_filenames:
-        if texture_filename not in dest_jpc.textures_by_filename:
-          texture = drc_jpc.textures_by_filename[texture_filename]
-          copied_texture = copy.deepcopy(texture)
-          dest_jpc.add_texture(copied_texture)
 
-def remove_makar_kidnapping_event(self):
-  dzx = self.get_arc("files/res/Stage/kaze/Room3.arc").get_file("room.dzr")
-  actors = dzx.entries_by_type_and_layer("ACTR", None)
-  
-  # Remove the AND switch actor that makes the Floormasters appear after unlocking the door.
-  and_switch_actor = next(x for x in actors if x.name == "AND_SW2")
-  dzx.remove_entity(and_switch_actor, "ACTR", layer=None)
-  
-  # Remove the enable spawn switch from the Wizzrobe so it's just always there.
-  wizzrobe = next(x for x in actors if x.name == "wiz_r")
-  wizzrobe.enable_spawn_switch = 0xFF
-  wizzrobe.save_changes()
+def add_inter_dungeon_warp_pots(randomizer: 'Randomizer'):
+    for warp_pot_datas_in_this_cycle in INTER_DUNGEON_WARP_DATA:
+        for warp_pot_index, warp_pot_data in enumerate(warp_pot_datas_in_this_cycle):
+            room_arc_path = "files/res/Stage/%s/Room%d.arc" % (warp_pot_data.stage_name, warp_pot_data.room_num)
+            stage_arc_path = "files/res/Stage/%s/Stage.arc" % warp_pot_data.stage_name
+            room_dzx = randomizer.get_arc(room_arc_path).get_file("room.dzr")
+            stage_dzx = randomizer.get_arc(stage_arc_path).get_file("stage.dzs")
 
-def increase_player_movement_speeds(self):
-  # Double crawling speed.
-  self.dol.write_data(write_float, 0x8035DB94, 3.0*2)
-  
-  # Change rolling so that it scales from 20.0 to 26.0 speed depending on the player's speed when they roll.
-  # In vanilla, it scaled from 0.5 to 26.0 instead.
-  self.dol.write_data(write_float, 0x8035D3D0, 6.0/17.0) # Rolling speed multiplier on walking speed
-  self.dol.write_data(write_float, 0x8035D3D4, 20.0) # Rolling base speed
+            # Add new player spawn locations.
+            if warp_pot_data.stage_name in ["M_Dai", "kaze"]:
+                # Earth and Wind temple spawns must be in the stage instead of the room or the game will crash. Not sure why.
+                dzx_for_spawn = stage_dzx
+            else:
+                dzx_for_spawn = room_dzx
+            spawn = dzx_for_spawn.add_entity("PLYR", layer=None)
+            spawn.spawn_type = 7  # Flying out of a warp pot
+            spawn.room_num = warp_pot_data.room_num
+            spawn.x_pos = warp_pot_data.x
+            spawn.y_pos = warp_pot_data.y
+            spawn.z_pos = warp_pot_data.z
+            spawn.y_rot = warp_pot_data.y_rot
+            spawn.spawn_id = 69
 
-def add_chart_number_to_item_get_messages(self):
-  for item_id, item_name in self.item_names.items():
-    if item_name.startswith("Treasure Chart "):
-      msg = self.bmg.messages_by_id[101 + item_id]
-      msg.string = msg.string.replace("a \\{1A 06 FF 00 00 01}Treasure Chart", "\\{1A 06 FF 00 00 01}%s" % item_name)
-    elif item_name.startswith("Triforce Chart ") and not "deciphered" in item_name:
-      msg = self.bmg.messages_by_id[101 + item_id]
-      msg.string = msg.string.replace("a \\{1A 06 FF 00 00 01}Triforce Chart", "\\{1A 06 FF 00 00 01}%s" % item_name)
+            # Ensure there wasn't already a spawn using the ID we chose, just to be safe.
+            spawns = dzx_for_spawn.entries_by_type("PLYR")
+            spawn_id_69s = [x for x in spawns if x.spawn_id == 69]
+            assert len(spawn_id_69s) == 1
+
+            # Add new exits.
+            pot_index_to_exit_index = []
+            for other_warp_pot_data in warp_pot_datas_in_this_cycle:
+                scls_exit = room_dzx.add_entity("SCLS", layer=None)
+                scls_exit.dest_stage_name = other_warp_pot_data.stage_name
+                scls_exit.spawn_id = 69
+                scls_exit.room_index = other_warp_pot_data.room_num
+                scls_exit.fade_type = 4  # Warp pot fade out
+                pot_index_to_exit_index.append(len(room_dzx.entries_by_type("SCLS")) - 1)
+
+            # Add the warp pots themselves.
+            warp_pot = room_dzx.add_entity("ACTR", layer=None)
+            warp_pot.name = "Warpts%d" % (warp_pot_index + 1)  # Warpts1 Warpts2 or Warpts3
+            warp_pot.type = warp_pot_index + 2  # 2 3 or 4
+            warp_pot.cyclic_event_reg_index = warp_pot_data.event_reg_index
+            warp_pot.cyclic_dest_1_exit = pot_index_to_exit_index[0]
+            warp_pot.cyclic_dest_2_exit = pot_index_to_exit_index[1]
+            warp_pot.cyclic_dest_3_exit = pot_index_to_exit_index[2]
+            warp_pot.x_pos = warp_pot_data.x
+            warp_pot.y_pos = warp_pot_data.y
+            warp_pot.z_pos = warp_pot_data.z
+            warp_pot.y_rot = warp_pot_data.y_rot
+            warp_pot.x_rot = 0xFFFF
+            warp_pot.z_rot = 0xFFFF
+
+            room_dzx.save_changes()
+            stage_dzx.save_changes()
+
+    # We also need to copy the particles used by the warp pots into the FF and TotG particle banks.
+    # Without this the warp pots would have no particles, and the game would crash on real hardware.
+    drc_jpc = randomizer.get_jpc("files/res/Particle/Pscene035.jpc")
+    totg_jpc = randomizer.get_jpc("files/res/Particle/Pscene050.jpc")
+    ff_jpc = randomizer.get_jpc("files/res/Particle/Pscene043.jpc")
+
+    for particle_id in [0x8161, 0x8162, 0x8165, 0x8166, 0x8112]:
+        particle = drc_jpc.particles_by_id[particle_id]
+
+        for dest_jpc in [totg_jpc, ff_jpc]:
+            copied_particle = copy.deepcopy(particle)
+            dest_jpc.add_particle(copied_particle)
+
+            for texture_filename in copied_particle.tdb1.texture_filenames:
+                if texture_filename not in dest_jpc.textures_by_filename:
+                    texture = drc_jpc.textures_by_filename[texture_filename]
+                    copied_texture = copy.deepcopy(texture)
+                    dest_jpc.add_texture(copied_texture)
+
+
+def remove_makar_kidnapping_event(randomizer: 'Randomizer'):
+    dzx = randomizer.get_arc("files/res/Stage/kaze/Room3.arc").get_file("room.dzr")
+    actors = dzx.entries_by_type_and_layer("ACTR", None)
+
+    # Remove the AND switch actor that makes the Floormasters appear after unlocking the door.
+    and_switch_actor = next(x for x in actors if x.name == "AND_SW2")
+    dzx.remove_entity(and_switch_actor, "ACTR", layer=None)
+
+    # Remove the enable spawn switch from the Wizzrobe so it's just always there.
+    wizzrobe = next(x for x in actors if x.name == "wiz_r")
+    wizzrobe.enable_spawn_switch = 0xFF
+    wizzrobe.save_changes()
+
+
+def increase_player_movement_speeds(randomizer: 'Randomizer'):
+    # Double crawling speed.
+    randomizer.dol.write_data(write_float, 0x8035DB94, 3.0 * 2)
+
+    # Change rolling so that it scales from 20.0 to 26.0 speed depending on the player's speed when they roll.
+    # In vanilla, it scaled from 0.5 to 26.0 instead.
+    randomizer.dol.write_data(write_float, 0x8035D3D0, 6.0 / 17.0)  # Rolling speed multiplier on walking speed
+    randomizer.dol.write_data(write_float, 0x8035D3D4, 20.0)  # Rolling base speed
+
+
+def add_chart_number_to_item_get_messages(randomizer):
+    for item_id, item_name in randomizer.item_names.items():
+        if item_name.startswith("Treasure Chart "):
+            msg = randomizer.bmg.messages_by_id[101 + item_id]
+            msg.string = msg.string.replace("a \\{1A 06 FF 00 00 01}Treasure Chart",
+                                            "\\{1A 06 FF 00 00 01}%s" % item_name)
+        elif item_name.startswith("Triforce Chart ") and not "deciphered" in item_name:
+            msg = randomizer.bmg.messages_by_id[101 + item_id]
+            msg.string = msg.string.replace("a \\{1A 06 FF 00 00 01}Triforce Chart",
+                                            "\\{1A 06 FF 00 00 01}%s" % item_name)
 
 
 # Speeds up the grappling hook significantly to behave similarly to HD
-def increase_grapple_animation_speed(self):
-  # Double the velocity the grappling hook is thrown out (from 20.0 to 40.0)
-  # Instead of reading 20.0 from 803F9D28, read 40.0 from 803F9DAC.
-  # (We can't just change the float value itself because it's used for multiple things.)
-  self.dol.write_data(write_s16, 0x800EE0E4+2, 0x803F9DAC-0x803FFD00)
-  
-  # Half the number of frames grappling hook extends outward in 1st person (from 40 to 20 frames)
-  self.dol.write_data(write_u32, 0x800EDB74, 0x38030014) # addi r0,r3,20
-  
-  # Half the number of frames grappling hook extends outward in 3rd person (from 20 to 10)
-  self.dol.write_data(write_u32, 0x800EDEA4, 0x3803000A) # addi r0,r3,10
-  
-  # Increase the speed in which the grappling hook falls onto it's target (from 10.0 to 20.0)
-  # Instead of reading 10.0 from 803F9C44, read 20.0 from 803F9D28.
-  # (We can't just change the float value itself because it's used for multiple things.)
-  self.dol.write_data(write_s16, 0x800EEC40+2, 0x803F9D28-0x803FFD00)
-  
-  # Increase grappling hook speed as it wraps around its target (from 17.0 to 25.0)
-  # (Only read in one spot, so we can change the value directly.)
-  self.dol.write_data(write_float, 0x803F9D60, 25.0)
-  
-  # Increase the counter that determines how fast to end the wrap around animation. (From +1 each frame to +6 each frame)
-  self.dol.write_data(write_u32, 0x800EECA8, 0x38A30006) # addi r5,r3,6
+def increase_grapple_animation_speed(randomizer: 'Randomizer'):
+    # Double the velocity the grappling hook is thrown out (from 20.0 to 40.0)
+    # Instead of reading 20.0 from 803F9D28, read 40.0 from 803F9DAC.
+    # (We can't just change the float value itself because it's used for multiple things.)
+    randomizer.dol.write_data(write_s16, 0x800EE0E4 + 2, 0x803F9DAC - 0x803FFD00)
+
+    # Half the number of frames grappling hook extends outward in 1st person (from 40 to 20 frames)
+    randomizer.dol.write_data(write_u32, 0x800EDB74, 0x38030014)  # addi r0,r3,20
+
+    # Half the number of frames grappling hook extends outward in 3rd person (from 20 to 10)
+    randomizer.dol.write_data(write_u32, 0x800EDEA4, 0x3803000A)  # addi r0,r3,10
+
+    # Increase the speed in which the grappling hook falls onto it's target (from 10.0 to 20.0)
+    # Instead of reading 10.0 from 803F9C44, read 20.0 from 803F9D28.
+    # (We can't just change the float value itself because it's used for multiple things.)
+    randomizer.dol.write_data(write_s16, 0x800EEC40 + 2, 0x803F9D28 - 0x803FFD00)
+
+    # Increase grappling hook speed as it wraps around its target (from 17.0 to 25.0)
+    # (Only read in one spot, so we can change the value directly.)
+    randomizer.dol.write_data(write_float, 0x803F9D60, 25.0)
+
+    # Increase the counter that determines how fast to end the wrap around animation. (From +1 each frame to +6 each frame)
+    randomizer.dol.write_data(write_u32, 0x800EECA8, 0x38A30006)  # addi r5,r3,6
+
 
 # Speeds up the rate in which blocks move when pushed/pulled
-def increase_block_moving_animation(self):
-  # Increase Link's pushing animation speed from 1.0 to 1.4
-  # Note that this causes a softlock when opening a specific door in Forsaken Fortress - see fix_forsaken_fortress_door_softlock for more details.
-  self.dol.write_data(write_float, 0x8035DBB0, 1.4)
-  
-  # Increase Link's pulling animation speed from 1.0 to 1.4
-  self.dol.write_data(write_float, 0x8035DBB8, 1.4)
-  
-  block_rel = self.get_rel("files/rels/d_a_obj_movebox.rel")
-  
-  offset = 0x54B0 # M_attr__Q212daObjMovebox5Act_c. List of various data for each type of block.
-  for i in range(13): # 13 types of blocks total.
-    block_rel.write_data(write_u16, offset + 0x04, 12) # Reduce number frames for pushing to last from 20 to 12
-    block_rel.write_data(write_u16, offset + 0x0A, 12) # Reduce number frames for pulling to last from 20 to 12
-    offset += 0x9C
+def increase_block_moving_animation(randomizer: 'Randomizer'):
+    # Increase Link's pushing animation speed from 1.0 to 1.4
+    # Note that this causes a softlock when opening a specific door in Forsaken Fortress - see fix_forsaken_fortress_door_softlock for more details.
+    randomizer.dol.write_data(write_float, 0x8035DBB0, 1.4)
 
-def increase_misc_animations(self):
-  # Increase the animation speed that Link initiates a climb (0.8 -> 1.6)
-  self.dol.write_data(write_float, 0x8035D738, 1.6)
-  
-  # Increase speed Link climbs ladders/vines (1.2 -> 1.6)
-  self.dol.write_data(write_float, 0x8035DB38, 1.6)
-  
-  # Increase speed Link starts climbing a ladder/vine (1.0 -> 1.6)
-  self.dol.write_data(write_float, 0x8035DB18, 1.6)
-  
-  # Increase speed Link ends climbing a ladder/vine (0.9 -> 1.4)
-  self.dol.write_data(write_float, 0x8035DB20, 1.4)
-  
-  # Increase Link's sidle animation speed (1.6 -> 2.0)
-  self.dol.write_data(write_float, 0x8035D6AC, 2.0)
-  
-  # Half the number of frames camera takes to focus on an npc for a conversation (from 20 to 10)
-  self.dol.write_data(write_u32, 0x8016DA2C, 0x3800000A) # li r0,10
+    # Increase Link's pulling animation speed from 1.0 to 1.4
+    randomizer.dol.write_data(write_float, 0x8035DBB8, 1.4)
+
+    block_rel = randomizer.get_rel("files/rels/d_a_obj_movebox.rel")
+
+    offset = 0x54B0  # M_attr__Q212daObjMovebox5Act_c. List of various data for each type of block.
+    for i in range(13):  # 13 types of blocks total.
+        block_rel.write_data(write_u16, offset + 0x04, 12)  # Reduce number frames for pushing to last from 20 to 12
+        block_rel.write_data(write_u16, offset + 0x0A, 12)  # Reduce number frames for pulling to last from 20 to 12
+        offset += 0x9C
 
 
-def change_starting_clothes(self):
-  custom_model_metadata = customizer.get_model_metadata(self.custom_model_name)
-  disable_casual_clothes = custom_model_metadata.get("disable_casual_clothes", False)
-  
-  should_start_with_heros_clothes_address = self.main_custom_symbols["should_start_with_heros_clothes"]
-  if self.options.get("player_in_casual_clothes") and not disable_casual_clothes:
-    self.dol.write_data(write_u8, should_start_with_heros_clothes_address, 0)
-  else:
-    self.dol.write_data(write_u8, should_start_with_heros_clothes_address, 1)
+def increase_misc_animations(randomizer: 'Randomizer'):
+    # Increase the animation speed that Link initiates a climb (0.8 -> 1.6)
+    randomizer.dol.write_data(write_float, 0x8035D738, 1.6)
 
-def check_hide_ship_sail(self):
-  # Allow the custom model author to specify if they want the ship's sail to be hidden.
-  # The reason simply changing the texture to be transparent doesn't work is that even when fully transparent, it will still be rendered over the white lines the ship makes when parting the sea in front of it.
-  custom_model_metadata = customizer.get_model_metadata(self.custom_model_name)
-  hide_ship_sail = custom_model_metadata.get("hide_ship_sail", False)
-  
-  if hide_ship_sail:
-    # Make the sail's draw function return immediately to hide it.
-    sail_draw_func_address = 0x800E93B8 # daHo_packet_c::draw(void)
-    self.dol.write_data(write_u32, sail_draw_func_address, 0x4E800020) # blr
+    # Increase speed Link climbs ladders/vines (1.2 -> 1.6)
+    randomizer.dol.write_data(write_float, 0x8035DB38, 1.6)
 
-def shorten_auction_intro_event(self):
-  event_list = self.get_arc("files/res/Stage/Orichh/Stage.arc").get_file("event_list.dat")
-  wind_shrine_event = event_list.events_by_name["AUCTION_START"]
-  camera = next(actor for actor in wind_shrine_event.actors if actor.name == "CAMERA")
-  
-  #pre_pan_delay = camera.actions[2]
-  pan_action = camera.actions[3]
-  post_pan_delay = camera.actions[4]
-  
-  # Remove the 200 frame long panning action and the 30 frame delay after panning.
-  # We don't remove the 30 frame delay before panning, because of the intro is completely removed or only a couple frames long, there is a race condition where the timer entity may not be finished being asynchronously created until the intro is over. If this happens the auction entity will have no reference to the timer entity, causing a crash later on.
-  camera.actions.remove(pan_action)
-  camera.actions.remove(post_pan_delay)
+    # Increase speed Link starts climbing a ladder/vine (1.0 -> 1.6)
+    randomizer.dol.write_data(write_float, 0x8035DB18, 1.6)
 
-def disable_invisible_walls(self):
-  # Remove some invisible walls to allow sequence breaking.
-  # In vanilla switch index FF meant an invisible wall appears only when you have no sword.
-  # But we remove that in randomizer, so invisible walls with switch index FF act effectively completely disabled. So we use this to disable these invisible walls.
-  
-  # Remove an invisible wall in the second room of DRC.
-  dzx = self.get_arc("files/res/Stage/M_NewD2/Room2.arc").get_file("room.dzr")
-  invisible_wall = next(x for x in dzx.entries_by_type("SCOB") if x.name == "Akabe")
-  invisible_wall.switch_index = 0xFF
-  invisible_wall.save_changes()
+    # Increase speed Link ends climbing a ladder/vine (0.9 -> 1.4)
+    randomizer.dol.write_data(write_float, 0x8035DB20, 1.4)
 
-def update_skip_rematch_bosses_game_variable(self):
-  skip_rematch_bosses_address = self.main_custom_symbols["skip_rematch_bosses"]
-  if self.options.get("skip_rematch_bosses"):
-    self.dol.write_data(write_u8, skip_rematch_bosses_address, 1)
-  else:
-    self.dol.write_data(write_u8, skip_rematch_bosses_address, 0)
+    # Increase Link's sidle animation speed (1.6 -> 2.0)
+    randomizer.dol.write_data(write_float, 0x8035D6AC, 2.0)
 
-def update_sword_mode_game_variable(self):
-  sword_mode_address = self.main_custom_symbols["sword_mode"]
-  if self.options.get("sword_mode") == "Start with Hero's Sword":
-    self.dol.write_data(write_u8, sword_mode_address, 0)
-  elif self.options.get("sword_mode") == "No Starting Sword":
-    self.dol.write_data(write_u8, sword_mode_address, 1)
-  elif self.options.get("sword_mode") == "Swordless":
-    self.dol.write_data(write_u8, sword_mode_address, 2)
-  else:
-    raise Exception("Unknown sword mode: %s" % self.options.get("sword_mode"))
+    # Half the number of frames camera takes to focus on an npc for a conversation (from 20 to 10)
+    randomizer.dol.write_data(write_u32, 0x8016DA2C, 0x3800000A)  # li r0,10
 
-def update_starting_gear(self):
-  starting_gear = self.options.get("starting_gear").copy()
-  
-  if "Magic Meter Upgrade" in starting_gear:
-    # Double magic doesn't work when given via our normal starting items initialization code, so we need to handle it specially.
-    give_double_magic(self)
-    starting_gear.remove("Magic Meter Upgrade")
-  
-  if len(starting_gear) > MAXIMUM_ADDITIONAL_STARTING_ITEMS:
-    raise Exception("Tried to start with more starting items than the maximum number that was allocated")
-  starting_gear_array_address = self.main_custom_symbols["starting_gear"]
-  for i in range(len(starting_gear)):
-    item_id = self.item_name_to_id[starting_gear[i]]
-    self.dol.write_data(write_u8, starting_gear_array_address+i, item_id)
-  
-  # Write end marker.
-  self.dol.write_data(write_u8, starting_gear_array_address+len(starting_gear), 0xFF)
 
-def update_text_for_swordless(self):
-  msg = self.bmg.messages_by_id[1128]
-  msg.string = "\\{1A 05 00 00 00}, you may not have the\nMaster Sword, but do not be afraid!\n\n\n"
-  msg.string += "The hammer of the dead is all you\nneed to crush your foe...\n\n\n"
-  msg.string += "Even as his ball of fell magic bears down\non you, you can \\{1A 06 FF 00 00 01}knock it back\nwith an empty bottle\\{1A 06 FF 00 00 00}!\n\n"
-  msg.string += "...I am sure you will have a shot at victory!"
-  
-  msg = self.bmg.messages_by_id[1590]
-  msg.string = "\\{1A 05 00 00 00}! Do not run! Trust in the\n"
-  msg.string += "power of the Skull Hammer!"
+def change_starting_clothes(randomizer: 'Randomizer'):
+    custom_model_metadata = customizer.get_model_metadata(randomizer.custom_model_name)
+    disable_casual_clothes = custom_model_metadata.get("disable_casual_clothes", False)
 
-def add_hint_signs(self):
-  # Add a hint sign to the second room of DRC with an arrow pointing to the passage to the Big Key Chest.
-  new_message_id = 847
-  msg = self.bmg.add_new_message(new_message_id)
-  msg.string = "\\{1A 05 00 00 15}" # Right arrow
-  msg.text_box_type = 2 # Wooden sign message box
-  msg.initial_draw_type = 1 # Instant initial message speed
-  msg.text_alignment = 3 # Centered text alignment
-  
-  dzx = self.get_arc("files/res/Stage/M_NewD2/Room2.arc").get_file("room.dzr")
-  bomb_flowers = [actor for actor in dzx.entries_by_type_and_layer("ACTR", None) if actor.name == "BFlower"]
-  bomb_flowers[1].name = "Kanban"
-  bomb_flowers[1].params = new_message_id
-  bomb_flowers[1].y_rot = 0x2000
-  bomb_flowers[1].save_changes()
+    should_start_with_heros_clothes_address = randomizer.main_custom_symbols["should_start_with_heros_clothes"]
+    if randomizer.options.get("player_in_casual_clothes") and not disable_casual_clothes:
+        randomizer.dol.write_data(write_u8, should_start_with_heros_clothes_address, 0)
+    else:
+        randomizer.dol.write_data(write_u8, should_start_with_heros_clothes_address, 1)
 
-def prevent_door_boulder_softlocks(self):
-  # DRC has a couple of doors that are blocked by boulders on one side.
-  # This is an issue if the player sequence breaks and goes backwards - when they open the door Link will be stuck walking into the boulder forever and the player will have no control.
-  # To avoid this, add a switch setting trigger on the back side of those doors that causes the boulder to disappear when the player touches it.
-  # This allows us to keep the boulder when the player goes forward through the dungeon, but not backwards.
-  
-  # Add a SW_C00 (switch setting trigger region) on the other side of the first door blocked by a boulder.
-  boulder_destroyed_switch_index = 5
-  dzr = self.get_arc("files/res/Stage/M_NewD2/Room13.arc").get_file("room.dzr")
-  swc00 = dzr.add_entity("SCOB", layer=None)
-  swc00.name = "SW_C00"
-  swc00.params = 0x0000FF00
-  swc00.switch_to_set = boulder_destroyed_switch_index
-  swc00.behavior_type = 3 # Don't unset the switch when leaving the region
-  swc00.x_pos = 2635
-  swc00.y_pos = 0
-  swc00.z_pos = 227
-  swc00.x_rot = 0
-  swc00.y_rot = 0xC000
-  swc00.z_rot = 0xFFFF
-  swc00.scale_x = 32
-  swc00.scale_y = 16
-  swc00.scale_z = 16
-  dzr.save_changes()
-  
-  # Add a SW_C00 (switch setting trigger region) on the other side of the second door blocked by a boulder.
-  boulder_destroyed_switch_index = 6
-  dzr = self.get_arc("files/res/Stage/M_NewD2/Room14.arc").get_file("room.dzr")
-  swc00 = dzr.add_entity("SCOB", layer=None)
-  swc00.name = "SW_C00"
-  swc00.params = 0x0000FF00
-  swc00.switch_to_set = boulder_destroyed_switch_index
-  swc00.behavior_type = 3 # Don't unset the switch when leaving the region
-  swc00.x_pos = -4002
-  swc00.y_pos = 1950
-  swc00.z_pos = -2156
-  swc00.x_rot = 0
-  swc00.y_rot = 0xA000
-  swc00.z_rot = 0xFFFF
-  swc00.scale_x = 32
-  swc00.scale_y = 16
-  swc00.scale_z = 16
-  dzr.save_changes()
 
-def update_tingle_statue_item_get_funcs(self):
-  item_get_funcs_list = 0x803888C8
-  
-  for tingle_statue_item_id in [0xA3, 0xA4, 0xA5, 0xA6, 0xA7]:
-    item_get_func_addr = item_get_funcs_list + tingle_statue_item_id*4
-    item_name = self.item_names[tingle_statue_item_id]
-    custom_symbol_name = item_name.lower().replace(" ", "_") + "_item_get_func"
-    self.dol.write_data(write_u32, item_get_func_addr, self.main_custom_symbols[custom_symbol_name])
+def check_hide_ship_sail(randomizer: 'Randomizer'):
+    # Allow the custom model author to specify if they want the ship's sail to be hidden.
+    # The reason simply changing the texture to be transparent doesn't work is that even when fully transparent, it will still be rendered over the white lines the ship makes when parting the sea in front of it.
+    custom_model_metadata = customizer.get_model_metadata(randomizer.custom_model_name)
+    hide_ship_sail = custom_model_metadata.get("hide_ship_sail", False)
 
-def make_tingle_statue_reward_rupee_rainbow_colored(self):
-  # Change the color index of the special 500 rupee to be 7 - this is a special value (originally unused) we use to indicate to our custom code that it's the special rupee, and so it should have its color animated.
-  
-  # Register the proper item name.
-  self.register_renamed_item(0xB8, "Rainbow Rupee")
-  
-  item_resources_list_start = 0x803842B0
-  
-  item_id = self.item_name_to_id["Rainbow Rupee"]
-  rainbow_rupee_item_resource_addr = item_resources_list_start + item_id*0x24
-  
-  self.dol.write_data(write_u8, rainbow_rupee_item_resource_addr+0x14, 7)
+    if hide_ship_sail:
+        # Make the sail's draw function return immediately to hide it.
+        sail_draw_func_address = 0x800E93B8  # daHo_packet_c::draw(void)
+        randomizer.dol.write_data(write_u32, sail_draw_func_address, 0x4E800020)  # blr
 
-def show_seed_hash_on_name_entry_screen(self):
-  # Add some text to the name entry screen which has two random character names that vary based on the permalink (so the seed and settings both change it).
-  # This is so two players intending to play the same seed can verify if they really are on the same seed or not.
-  
-  if not self.permalink:
-    return
-  
-  if not self.options.get("do_not_generate_spoiler_log"):
-    integer_seed = self.convert_string_to_integer_md5(self.permalink)
-  else:
-    # When no spoiler log is generated, the seed key also affects randomization, not just the data in the permalink.
-    integer_seed = self.convert_string_to_integer_md5(self.permalink + SEED_KEY)
-  temp_rng = Random()
-  temp_rng.seed(integer_seed)
-  
-  with open(os.path.join(SEEDGEN_PATH, "names.txt")) as f:
-    all_names = f.read().splitlines()
-  valid_names = [name for name in all_names if len(name) <= 5]
-  
-  name_1, name_2 = temp_rng.sample(valid_names, 2)
-  name_1 = upper_first_letter(name_1)
-  name_2 = upper_first_letter(name_2)
-  self.seed_hash = name_1 + " " + name_2
-  
-  # Since actually adding new text to the UI would be very difficult, instead hijack the "Name Entry" text, and put the seed hash after several linebreaks.
-  # (The three linebreaks we insert before "Name Entry" are so it's still in the correct spot after vertical centering happens.)
-  msg = self.bmg.messages_by_id[40]
-  msg.string = "\n\n\n" + msg.string + "\n\n" + "Seed hash:" + "\n" + self.seed_hash
 
-def fix_ghost_ship_chest_crash(self):
-  # There's a vanilla crash that happens if you jump attack on top of the chest in the Ghost Ship.
-  # The cause of the crash is that there are unused rooms in the Ghost Ship stage with unused chests at the same position as the used chest.
-  # When Link lands on top of the overlapping chests the game thinks Link is in one of the unused rooms.
-  # The ky_tag0 object in the Ghost Ship checks a zone bit every frame, but checking a zone bit crashes if the current room is not loaded in because the zone was never initialized.
-  # So we simply move the other two unused chests away from the real one so they're far out of bounds.
-  # (Actually deleting them would mess up the entity indexes in the logic files, so it's simpler to move them.)
-  
-  dzs = self.get_arc("files/res/Stage/PShip/Stage.arc").get_file("stage.dzs")
-  chests = dzs.entries_by_type("TRES")
-  for chest in chests:
-    if chest.room_num == 2:
-      # The chest for room 2 is the one that is actually used, so don't move this one.
-      continue
-    chest.x_pos += 2000.0
-    chest.save_changes()
+def shorten_auction_intro_event(randomizer: 'Randomizer'):
+    event_list = randomizer.get_arc("files/res/Stage/Orichh/Stage.arc").get_file("event_list.dat")
+    wind_shrine_event = event_list.events_by_name["AUCTION_START"]
+    camera = next(actor for actor in wind_shrine_event.actors if actor.name == "CAMERA")
 
-def implement_key_bag(self):
-  # Replaces the Pirate's Charm description with a description that changes dynamically depending on the dungeon keys you have.
-  # To do this new text commands are implemented to show the dynamic numbers. There are 5 new commands, 0x4B to 0x4F, one for each dungeon. (Forsaken Fortress and Ganon's Tower are not included as they have no keys.)
-  
-  self.bmg.messages_by_id[403].string = "Key Bag"
-  str = "A handy bag for holding your keys!\n"
-  str += "Here's how many you've got with you:\n"
-  str += "DRC: \\{1A 05 00 00 4B}    "
-  str += "FW: \\{1A 05 00 00 4C}    "
-  str += "TotG: \\{1A 05 00 00 4D}\n"
-  str += "ET: \\{1A 05 00 00 4E}      "
-  str += "WT: \\{1A 05 00 00 4F}"
-  self.bmg.messages_by_id[603].string = str
-  
-  itemicons_arc = self.get_arc("files/res/Msg/itemicon.arc")
-  pirate_charm_icon = itemicons_arc.get_file("amulet_00.bti")
-  key_bag_icon_image_path = os.path.join(ASSETS_PATH, "key bag.png")
-  pirate_charm_icon.replace_image_from_path(key_bag_icon_image_path)
-  pirate_charm_icon.save_changes()
+    # pre_pan_delay = camera.actions[2]
+    pan_action = camera.actions[3]
+    post_pan_delay = camera.actions[4]
 
-DUNGEON_NAME_TO_SEA_CHART_QUEST_MARKER_INDEX = OrderedDict([
-  ("DragonRoostCavern", 7),
-  ("ForbiddenWoods", 5),
-  ("TowerOfTheGods", 3), # Originally Southern Triangle Island
-  ("ForsakenFortress", 2), # Originally Eastern Triangle Island
-  ("EarthTemple", 0),
-  ("WindTemple", 1),
+    # Remove the 200 frame long panning action and the 30 frame delay after panning.
+    # We don't remove the 30 frame delay before panning, because of the intro is completely removed or only a couple frames long, there is a race condition where the timer entity may not be finished being asynchronously created until the intro is over. If this happens the auction entity will have no reference to the timer entity, causing a crash later on.
+    camera.actions.remove(pan_action)
+    camera.actions.remove(post_pan_delay)
+
+
+def disable_invisible_walls(randomizer: 'Randomizer'):
+    # Remove some invisible walls to allow sequence breaking.
+    # In vanilla switch index FF meant an invisible wall appears only when you have no sword.
+    # But we remove that in randomizer, so invisible walls with switch index FF act effectively completely disabled. So we use this to disable these invisible walls.
+
+    # Remove an invisible wall in the second room of DRC.
+    dzx = randomizer.get_arc("files/res/Stage/M_NewD2/Room2.arc").get_file("room.dzr")
+    invisible_wall = next(x for x in dzx.entries_by_type("SCOB") if x.name == "Akabe")
+    invisible_wall.switch_index = 0xFF
+    invisible_wall.save_changes()
+
+
+def update_skip_rematch_bosses_game_variable(randomizer: 'Randomizer'):
+    skip_rematch_bosses_address = randomizer.main_custom_symbols["skip_rematch_bosses"]
+    if randomizer.options.get("skip_rematch_bosses"):
+        randomizer.dol.write_data(write_u8, skip_rematch_bosses_address, 1)
+    else:
+        randomizer.dol.write_data(write_u8, skip_rematch_bosses_address, 0)
+
+
+def update_sword_mode_game_variable(randomizer: 'Randomizer'):
+    sword_mode_address = randomizer.main_custom_symbols["sword_mode"]
+    if randomizer.options.get("sword_mode") == "Start with Hero's Sword":
+        randomizer.dol.write_data(write_u8, sword_mode_address, 0)
+    elif randomizer.options.get("sword_mode") == "No Starting Sword":
+        randomizer.dol.write_data(write_u8, sword_mode_address, 1)
+    elif randomizer.options.get("sword_mode") == "Swordless":
+        randomizer.dol.write_data(write_u8, sword_mode_address, 2)
+    else:
+        raise Exception("Unknown sword mode: %s" % randomizer.options.get("sword_mode"))
+
+
+def update_starting_gear(randomizer: 'Randomizer'):
+    starting_gear = randomizer.options.get("starting_gear").copy()
+
+    if "Magic Meter Upgrade" in starting_gear:
+        # Double magic doesn't work when given via our normal starting items initialization code, so we need to handle it specially.
+        give_double_magic(randomizer)
+        starting_gear.remove("Magic Meter Upgrade")
+
+    if len(starting_gear) > MAXIMUM_ADDITIONAL_STARTING_ITEMS:
+        raise Exception("Tried to start with more starting items than the maximum number that was allocated")
+    starting_gear_array_address = randomizer.main_custom_symbols["starting_gear"]
+    for i in range(len(starting_gear)):
+        item_id = randomizer.item_name_to_id[starting_gear[i]]
+        randomizer.dol.write_data(write_u8, starting_gear_array_address + i, item_id)
+
+    # Write end marker.
+    randomizer.dol.write_data(write_u8, starting_gear_array_address + len(starting_gear), 0xFF)
+
+
+def update_text_for_swordless(randomizer: 'Randomizer'):
+    msg = randomizer.bmg.messages_by_id[1128]
+    msg.string = "\\{1A 05 00 00 00}, you may not have the\nMaster Sword, but do not be afraid!\n\n\n"
+    msg.string += "The hammer of the dead is all you\nneed to crush your foe...\n\n\n"
+    msg.string += "Even as his ball of fell magic bears down\non you, you can \\{1A 06 FF 00 00 01}knock it back\nwith an empty bottle\\{1A 06 FF 00 00 00}!\n\n"
+    msg.string += "...I am sure you will have a shot at victory!"
+
+    msg = randomizer.bmg.messages_by_id[1590]
+    msg.string = "\\{1A 05 00 00 00}! Do not run! Trust in the\n"
+    msg.string += "power of the Skull Hammer!"
+
+
+def add_hint_signs(randomizer: 'Randomizer'):
+    # Add a hint sign to the second room of DRC with an arrow pointing to the passage to the Big Key Chest.
+    new_message_id = 847
+    msg = randomizer.bmg.add_new_message(new_message_id)
+    msg.string = "\\{1A 05 00 00 15}"  # Right arrow
+    msg.text_box_type = 2  # Wooden sign message box
+    msg.initial_draw_type = 1  # Instant initial message speed
+    msg.text_alignment = 3  # Centered text alignment
+
+    dzx = randomizer.get_arc("files/res/Stage/M_NewD2/Room2.arc").get_file("room.dzr")
+    bomb_flowers = [actor for actor in dzx.entries_by_type_and_layer("ACTR", None) if actor.name == "BFlower"]
+    bomb_flowers[1].name = "Kanban"
+    bomb_flowers[1].params = new_message_id
+    bomb_flowers[1].y_rot = 0x2000
+    bomb_flowers[1].save_changes()
+
+
+def prevent_door_boulder_softlocks(randomizer: 'Randomizer'):
+    # DRC has a couple of doors that are blocked by boulders on one side.
+    # This is an issue if the player sequence breaks and goes backwards - when they open the door Link will be stuck walking into the boulder forever and the player will have no control.
+    # To avoid this, add a switch setting trigger on the back side of those doors that causes the boulder to disappear when the player touches it.
+    # This allows us to keep the boulder when the player goes forward through the dungeon, but not backwards.
+
+    # Add a SW_C00 (switch setting trigger region) on the other side of the first door blocked by a boulder.
+    boulder_destroyed_switch_index = 5
+    dzr = randomizer.get_arc("files/res/Stage/M_NewD2/Room13.arc").get_file("room.dzr")
+    swc00 = dzr.add_entity("SCOB", layer=None)
+    swc00.name = "SW_C00"
+    swc00.params = 0x0000FF00
+    swc00.switch_to_set = boulder_destroyed_switch_index
+    swc00.behavior_type = 3  # Don't unset the switch when leaving the region
+    swc00.x_pos = 2635
+    swc00.y_pos = 0
+    swc00.z_pos = 227
+    swc00.x_rot = 0
+    swc00.y_rot = 0xC000
+    swc00.z_rot = 0xFFFF
+    swc00.scale_x = 32
+    swc00.scale_y = 16
+    swc00.scale_z = 16
+    dzr.save_changes()
+
+    # Add a SW_C00 (switch setting trigger region) on the other side of the second door blocked by a boulder.
+    boulder_destroyed_switch_index = 6
+    dzr = randomizer.get_arc("files/res/Stage/M_NewD2/Room14.arc").get_file("room.dzr")
+    swc00 = dzr.add_entity("SCOB", layer=None)
+    swc00.name = "SW_C00"
+    swc00.params = 0x0000FF00
+    swc00.switch_to_set = boulder_destroyed_switch_index
+    swc00.behavior_type = 3  # Don't unset the switch when leaving the region
+    swc00.x_pos = -4002
+    swc00.y_pos = 1950
+    swc00.z_pos = -2156
+    swc00.x_rot = 0
+    swc00.y_rot = 0xA000
+    swc00.z_rot = 0xFFFF
+    swc00.scale_x = 32
+    swc00.scale_y = 16
+    swc00.scale_z = 16
+    dzr.save_changes()
+
+
+def update_tingle_statue_item_get_funcs(randomizer: 'Randomizer'):
+    item_get_funcs_list = 0x803888C8
+
+    for tingle_statue_item_id in [0xA3, 0xA4, 0xA5, 0xA6, 0xA7]:
+        item_get_func_addr = item_get_funcs_list + tingle_statue_item_id * 4
+        item_name = randomizer.item_names[tingle_statue_item_id]
+        custom_symbol_name = item_name.lower().replace(" ", "_") + "_item_get_func"
+        randomizer.dol.write_data(write_u32, item_get_func_addr, randomizer.main_custom_symbols[custom_symbol_name])
+
+
+def make_tingle_statue_reward_rupee_rainbow_colored(randomizer: 'Randomizer'):
+    # Change the color index of the special 500 rupee to be 7 - this is a special value (originally unused) we use to indicate to our custom code that it's the special rupee, and so it should have its color animated.
+
+    # Register the proper item name.
+    randomizer.register_renamed_item(0xB8, "Rainbow Rupee")
+
+    item_resources_list_start = 0x803842B0
+
+    item_id = randomizer.item_name_to_id["Rainbow Rupee"]
+    rainbow_rupee_item_resource_addr = item_resources_list_start + item_id * 0x24
+
+    randomizer.dol.write_data(write_u8, rainbow_rupee_item_resource_addr + 0x14, 7)
+
+
+def show_seed_hash_on_name_entry_screen(randomizer: 'Randomizer'):
+    # Add some text to the name entry screen which has two random character names that vary based on the permalink (so the seed and settings both change it).
+    # This is so two players intending to play the same seed can verify if they really are on the same seed or not.
+
+    if not randomizer.permalink:
+        return
+
+    if not randomizer.options.get("do_not_generate_spoiler_log"):
+        integer_seed = randomizer.convert_string_to_integer_md5(randomizer.permalink)
+    else:
+        # When no spoiler log is generated, the seed key also affects randomization, not just the data in the permalink.
+        integer_seed = randomizer.convert_string_to_integer_md5(randomizer.permalink + SEED_KEY)
+    temp_rng = Random()
+    temp_rng.seed(integer_seed)
+
+    with open(os.path.join(SEEDGEN_PATH, "names.txt")) as f:
+        all_names = f.read().splitlines()
+    valid_names = [name for name in all_names if len(name) <= 5]
+
+    name_1, name_2 = temp_rng.sample(valid_names, 2)
+    name_1 = upper_first_letter(name_1)
+    name_2 = upper_first_letter(name_2)
+    randomizer.seed_hash = name_1 + " " + name_2
+
+    # Since actually adding new text to the UI would be very difficult, instead hijack the "Name Entry" text, and put the seed hash after several linebreaks.
+    # (The three linebreaks we insert before "Name Entry" are so it's still in the correct spot after vertical centering happens.)
+    msg = randomizer.bmg.messages_by_id[40]
+    msg.string = "\n\n\n" + msg.string + "\n\n" + "Seed hash:" + "\n" + randomizer.seed_hash
+
+
+def fix_ghost_ship_chest_crash(randomizer: 'Randomizer'):
+    # There's a vanilla crash that happens if you jump attack on top of the chest in the Ghost Ship.
+    # The cause of the crash is that there are unused rooms in the Ghost Ship stage with unused chests at the same position as the used chest.
+    # When Link lands on top of the overlapping chests the game thinks Link is in one of the unused rooms.
+    # The ky_tag0 object in the Ghost Ship checks a zone bit every frame, but checking a zone bit crashes if the current room is not loaded in because the zone was never initialized.
+    # So we simply move the other two unused chests away from the real one so they're far out of bounds.
+    # (Actually deleting them would mess up the entity indexes in the logic files, so it's simpler to move them.)
+
+    dzs = randomizer.get_arc("files/res/Stage/PShip/Stage.arc").get_file("stage.dzs")
+    chests = dzs.entries_by_type("TRES")
+    for chest in chests:
+        if chest.room_num == 2:
+            # The chest for room 2 is the one that is actually used, so don't move this one.
+            continue
+        chest.x_pos += 2000.0
+        chest.save_changes()
+
+
+def implement_key_bag(randomizer: 'Randomizer'):
+    # Replaces the Pirate's Charm description with a description that changes dynamically depending on the dungeon keys you have.
+    # To do this new text commands are implemented to show the dynamic numbers. There are 5 new commands, 0x4B to 0x4F, one for each dungeon. (Forsaken Fortress and Ganon's Tower are not included as they have no keys.)
+
+    randomizer.bmg.messages_by_id[403].string = "Key Bag"
+    key_bag_str = "A handy bag for holding your keys!\n"
+    key_bag_str += "Here's how many you've got with you:\n"
+    key_bag_str += "DRC: \\{1A 05 00 00 4B}    "
+    key_bag_str += "FW: \\{1A 05 00 00 4C}    "
+    key_bag_str += "TotG: \\{1A 05 00 00 4D}\n"
+    key_bag_str += "ET: \\{1A 05 00 00 4E}      "
+    key_bag_str += "WT: \\{1A 05 00 00 4F}"
+    randomizer.bmg.messages_by_id[603].string = key_bag_str
+
+    itemicons_arc = randomizer.get_arc("files/res/Msg/itemicon.arc")
+    pirate_charm_icon = itemicons_arc.get_file("amulet_00.bti")
+    key_bag_icon_image_path = os.path.join(ASSETS_PATH, "key bag.png")
+    pirate_charm_icon.replace_image_from_path(key_bag_icon_image_path)
+    pirate_charm_icon.save_changes()
+
+
+DUNGEON_NAME_TO_SEA_CHART_QUEST_MARKER_INDEX: Dict[AnyStr, int] = OrderedDict([
+    ("DragonRoostCavern", 7),
+    ("ForbiddenWoods", 5),
+    ("TowerOfTheGods", 3),  # Originally Southern Triangle Island
+    ("ForsakenFortress", 2),  # Originally Eastern Triangle Island
+    ("EarthTemple", 0),
+    ("WindTemple", 1),
 ])
+
+
 # Note: 4 is Northern Triangle Island and 6 is Greatfish Isle, these are not used by the randomizer.
 
-def show_quest_markers_on_sea_chart_for_dungeons(self, dungeon_names=[]):
-  # Uses the blue quest markers on the sea chart to highlight certain dungeons.
-  # This is done by toggling visibility on them and moving some Triangle Island ones around to repurpose them as dungeon ones.
-  # When the dungeon entrance rando is on, different entrances can lead into dungeons, so the positions of the markers are updated to point to the appropriate island in that case (including secret cave entrances).
-  
-  sea_chart_ui = self.get_arc("files/res/Msg/fmapres.arc").get_file_entry("f_map.blo")
-  sea_chart_ui.decompress_data_if_necessary()
-  first_quest_marker_pic1_offset = 0x43B0
-  
-  for dungeon_name in dungeon_names:
-    quest_marker_index = DUNGEON_NAME_TO_SEA_CHART_QUEST_MARKER_INDEX[dungeon_name]
-    
-    offset = first_quest_marker_pic1_offset + quest_marker_index*0x40
-    
-    # Make the quest marker icon be visible.
-    write_u8(sea_chart_ui.data, offset+9, 1)
-    
-    if dungeon_name == "Forsaken Fortress":
-      island_name = "Forsaken Fortress"
-    else:
-      island_name = self.dungeon_and_cave_island_locations[dungeon_name]
-    island_number = self.island_name_to_number[island_name]
-    sector_x = (island_number-1) % 7
-    sector_y = (island_number-1) // 7
-    
-    write_s16(sea_chart_ui.data, offset+0x10, sector_x*0x37-0xFA)
-    write_s16(sea_chart_ui.data, offset+0x12, sector_y*0x38-0xBC)
+def show_quest_markers_on_sea_chart_for_dungeons(randomizer: 'Randomizer', dungeon_names: List[AnyStr] =[]):
+    # Uses the blue quest markers on the sea chart to highlight certain dungeons.
+    # This is done by toggling visibility on them and moving some Triangle Island ones around to repurpose them as dungeon ones.
+    # When the dungeon entrance rando is on, different entrances can lead into dungeons, so the positions of the markers are updated to point to the appropriate island in that case (including secret cave entrances).
 
-def prevent_fire_mountain_lava_softlock(self):
-  # Sometimes when spawning from spawn ID 0 outside fire mountain, the player will get stuck in an infinite loop of taking damage from lava.
-  # The reason for this is that when the player enters the sea stage, the ship is spawned in at its new game starting position (either Outset or a randomized starting island) and the player is put on the ship.
-  # Then after a frame or two the ship is teleported to its proper spawn position near the island the player is supposed to be on, along with the player.
-  # The game's collision detection system draws a huge line between where the player was a frame ago (starting island) and where the player is right now (whatever the correct island is, such as Fire Mountain).
-  # If that collision line happens to pass through the Fire Mountain volcano, the player will be considered to be standing on the volcano for one frame.
-  # Because the volcano's collision is set to have the lava attribute, this results in the player taking lava damage.
-  # In order to avoid this, the Y coordinate of the ship's position when starting a new game is simply moved down to be extremely far below the ocean surface. This is so that any collision line in between it and any of the various other ship spawns will not hit anything at all.
-  # This does not result in the ship actually visibly spawning far below the sea when you start a new game, because the sea actor is smart enough to instantly teleport the ship on top whenever it falls below the surface.
-  
-  sea_dzs = self.get_arc("files/res/Stage/sea/Stage.arc").get_file("stage.dzs")
-  sea_actors = sea_dzs.entries_by_type("ACTR")
-  ship_actor = next(x for x in sea_actors if x.name == "Ship")
-  ship_actor.y_pos = -500000
-  ship_actor.save_changes()
+    sea_chart_ui = randomizer.get_arc("files/res/Msg/fmapres.arc").get_file_entry("f_map.blo")
+    sea_chart_ui.decompress_data_if_necessary()
+    first_quest_marker_pic1_offset = 0x43B0
 
-def add_chest_in_place_of_jabun_cutscene(self):
-  # Add a chest on a raft to Jabun's cave to replace the cutscene item you would normally get there.
-  
-  jabun_dzr = self.get_arc("files/res/Stage/Pjavdou/Room0.arc").get_file("room.dzr")
-  
-  raft = jabun_dzr.add_entity("ACTR", layer=None)
-  raft.name = "Ikada"
-  raft.y_rot = 0x8000
-  
-  # Turn wind on inside the cave so that the flag on the raft blows in the wind.
-  # Otherwise it clips inside the flagpole and looks bad.
-  room_props = jabun_dzr.entries_by_type("FILI")[0]
-  room_props.wind_type = 0 # Weakest wind (0.3 strength)
-  
-  jabun_chest = jabun_dzr.add_entity("TRES", layer=None)
-  jabun_chest.name = "takara3"
-  jabun_chest.params = 0xFF000000
-  jabun_chest.switch_to_set = 0xFF
-  jabun_chest.chest_type = 2
-  jabun_chest.appear_condition_switch = 0xFF
-  jabun_chest.opened_flag = 6
-  jabun_chest.behavior_type = 5 # Necessary for the chest to bob up and down with the raft it's on
-  jabun_chest.x_pos = 0
-  jabun_chest.y_pos = 300
-  jabun_chest.z_pos = -200
-  jabun_chest.room_num = 0
-  jabun_chest.y_rot = 0x8000
-  jabun_chest.item_id = self.item_name_to_id["Nayru's Pearl"]
-  
-  jabun_dzr.save_changes()
-  
-  
-  # Also move the big stone door and whirlpool blocking Jabun's cave entrance from layer 5 to the default layer.
-  # This is so they appear during the day too, not just at night.
-  outset_dzr = self.get_arc("files/res/Stage/sea/Room44.arc").get_file("room.dzr")
-  
-  layer_5_actors = outset_dzr.entries_by_type_and_layer("ACTR", 5)
-  layer_5_door = next(x for x in layer_5_actors if x.name == "Ajav")
-  layer_5_whirlpool = next(x for x in layer_5_actors if x.name == "Auzu")
-  
-  layer_none_door = outset_dzr.add_entity("ACTR", layer=None)
-  layer_none_door.name = layer_5_door.name
-  layer_none_door.params = layer_5_door.params
-  layer_none_door.x_pos = layer_5_door.x_pos
-  layer_none_door.y_pos = layer_5_door.y_pos
-  layer_none_door.z_pos = layer_5_door.z_pos
-  layer_none_door.x_rot = layer_5_door.x_rot
-  layer_none_door.y_rot = layer_5_door.y_rot
-  layer_none_door.z_rot = layer_5_door.z_rot
-  layer_none_door.enemy_number = layer_5_door.enemy_number
-  
-  layer_none_whirlpool = outset_dzr.add_entity("ACTR", layer=None)
-  layer_none_whirlpool.name = layer_5_whirlpool.name
-  layer_none_whirlpool.params = layer_5_whirlpool.params
-  layer_none_whirlpool.x_pos = layer_5_whirlpool.x_pos
-  layer_none_whirlpool.y_pos = layer_5_whirlpool.y_pos
-  layer_none_whirlpool.z_pos = layer_5_whirlpool.z_pos
-  layer_none_whirlpool.x_rot = layer_5_whirlpool.x_rot
-  layer_none_whirlpool.y_rot = layer_5_whirlpool.y_rot
-  layer_none_whirlpool.z_rot = layer_5_whirlpool.z_rot
-  layer_none_whirlpool.enemy_number = layer_5_whirlpool.enemy_number
-  
-  outset_dzr.remove_entity(layer_5_door, "ACTR", layer=5)
-  outset_dzr.remove_entity(layer_5_whirlpool, "ACTR", layer=5)
-  
-  outset_dzr.save_changes()
-  
-  
-  # Also modify the event that happens when you destroy the big stone door so that KoRL doesn't automatically enter the cave.
-  event_list = self.get_arc("files/res/Stage/sea/Stage.arc").get_file("event_list.dat")
-  unlock_cave_event = event_list.events_by_name["ajav_uzu"]
-  director = next(actor for actor in unlock_cave_event.actors if actor.name == "DIRECTOR")
-  camera = next(actor for actor in unlock_cave_event.actors if actor.name == "CAMERA")
-  ship = next(actor for actor in unlock_cave_event.actors if actor.name == "Ship")
-  
-  director.actions = director.actions[0:1]
-  camera.actions = camera.actions[0:2]
-  ship.actions = ship.actions[0:2]
-  unlock_cave_event.ending_flags = [
-    director.actions[-1].flag_id_to_set,
-    camera.actions[-1].flag_id_to_set,
-    -1
-  ]
+    for dungeon_name in dungeon_names:
+        quest_marker_index = DUNGEON_NAME_TO_SEA_CHART_QUEST_MARKER_INDEX[dungeon_name]
 
-def add_chest_in_place_of_master_sword(self):
-  # Add a chest to the Master Sword chamber that only materializes after you beat the Mighty Darknuts there.
-  
-  ms_chamber_dzr = self.get_arc("files/res/Stage/kenroom/Room0.arc").get_file("room.dzr")
-  
-  # Remove the Master Sword entities.
-  ms_actors = [x for x in ms_chamber_dzr.entries_by_type_and_layer("ACTR", None) if x.name in ["VmsMS", "VmsDZ"]]
-  for actor in ms_actors:
-    ms_chamber_dzr.remove_entity(actor, "ACTR", layer=None)
-  
-  # Copy the entities necessary for the Mighty Darknuts fight from layer 5 to the default layer.
-  layer_5_actors = ms_chamber_dzr.entries_by_type_and_layer("ACTR", 5)
-  layer_5_actors_to_copy = [x for x in layer_5_actors if x.name in ["Tn", "ALLdie", "Yswdr00"]]
-  
-  for orig_actor in layer_5_actors_to_copy:
-    new_actor = ms_chamber_dzr.add_entity("ACTR", layer=None)
-    new_actor.name = orig_actor.name
-    new_actor.params = orig_actor.params
-    new_actor.x_pos = orig_actor.x_pos
-    new_actor.y_pos = orig_actor.y_pos
-    new_actor.z_pos = orig_actor.z_pos
-    new_actor.x_rot = orig_actor.x_rot
-    new_actor.y_rot = orig_actor.y_rot
-    new_actor.z_rot = orig_actor.z_rot
-    new_actor.enemy_number = orig_actor.enemy_number
-  
-  # Remove the entities on layer 5 that are no longer necessary.
-  for orig_actor in layer_5_actors:
-    ms_chamber_dzr.remove_entity(orig_actor, "ACTR", layer=5)
-  
-  
-  # Add the chest.
-  ms_chest = ms_chamber_dzr.add_entity("TRES", layer=None)
-  ms_chest.name = "takara3"
-  ms_chest.params = 0xFF000000
-  ms_chest.switch_to_set = 0xFF
-  ms_chest.chest_type = 2
-  ms_chest.appear_condition_switch = 5 # The Mighty Darknuts set switch 5 when they die.
-  ms_chest.opened_flag = 0
-  ms_chest.behavior_type = 4
-  ms_chest.x_pos = -123.495
-  ms_chest.y_pos = -3220
-  ms_chest.z_pos = -7787.13 - 50
-  ms_chest.room_num = 0
-  ms_chest.y_rot = 0x0000
-  ms_chest.item_id = self.item_name_to_id["Progressive Sword"]
-  
-  
-  # Normally if the player saves and reloads or dies and respawns in this fight, they'll be put right back into it.
-  # But that would be bad in swordless mode since the player might not have anything to kill the Darknuts with and be stuck forever.
-  # So the spawn is moved back away from the fight's trigger area so that the player isn't forced back into the fight immediately.
-  spawn = next(spawn for spawn in ms_chamber_dzr.entries_by_type("PLYR") if spawn.spawn_id == 10)
-  spawn.y_pos = -2949.39
-  spawn.z_pos = -4240.7
-  
-  ms_chamber_dzr.save_changes()
+        offset = first_quest_marker_pic1_offset + quest_marker_index * 0x40
 
-def update_beedle_spoil_selling_text(self):
-  # Update Beedle's dialogue when you try to sell something to him so he mentions he doesn't want Blue Chu Jelly.
-  msg = self.bmg.messages_by_id[3957]
-  lines = msg.string.split("\n")
-  lines[2] = "And no Blue Chu Jelly, either!"
-  msg.string = "\n".join(lines)
+        # Make the quest marker icon be visible.
+        write_u8(sea_chart_ui.data, offset + 9, 1)
 
-def fix_totg_warp_out_spawn_pos(self):
-  # Normally the spawn point used when the player teleports out after beating the dungeon boss would put the player right on top of the Hyrule warp, which takes the player there immediately if it's active.
-  # Move the spawn forward a bit to avoid to avoid this.
-  
-  dzr = self.get_arc("files/res/Stage/sea/Room26.arc").get_file("room.dzr")
-  spawn = next(x for x in dzr.entries_by_type("PLYR") if x.spawn_id == 1)
-  spawn.z_pos += 1000.0
-  spawn.save_changes()
+        if dungeon_name == "Forsaken Fortress":
+            island_name = "Forsaken Fortress"
+        else:
+            island_name = randomizer.dungeon_and_cave_island_locations[dungeon_name]
+        island_number = randomizer.island_name_to_number[island_name]
+        sector_x = (island_number - 1) % 7
+        sector_y = (island_number - 1) // 7
 
-def remove_phantom_ganon_requirement_from_eye_reefs(self):
-  # Go through all the eye reef cannons that don't appear until you defeat Phantom Ganon and remove that switch requirement.
-  
-  for island_number in [24, 46, 22, 8, 37, 25]:
-    eye_reef_dzr = self.get_arc("files/res/Stage/sea/Room%d.arc" % island_number).get_file("room.dzr")
-    actors = eye_reef_dzr.entries_by_type("ACTR")
-    cannons = [x for x in actors if x.name == "Ocanon"]
-    for cannon in cannons:
-      if cannon.enable_spawn_switch == 0x2A: # Switch 2A is Phantom Ganon being dead.
-        cannon.enable_spawn_switch = 0xFF
-        cannon.save_changes()
-    gunboats = [x for x in actors if x.name == "Oship"]
-    for gunboat in gunboats:
-      if (gunboat.x_rot & 0xFF) == 0x2A: # Switch 2A is Phantom Ganon being dead.
-        gunboat.x_rot = (gunboat.x_rot & 0xFF00) | 0xFF
-        gunboat.save_changes()
+        write_s16(sea_chart_ui.data, offset + 0x10, sector_x * 0x37 - 0xFA)
+        write_s16(sea_chart_ui.data, offset + 0x12, sector_y * 0x38 - 0xBC)
 
-def test_room(self):
-  patcher.apply_patch(self, "test_room")
-  
-  stage_name_ptr = self.main_custom_symbols["test_room_stage_name"]
-  room_index_ptr = self.main_custom_symbols["test_room_room_index"]
-  spawn_id_ptr = self.main_custom_symbols["test_room_spawn_id"]
-  
-  self.dol.write_data(write_str, stage_name_ptr, self.test_room_args["stage"], 8)
-  self.dol.write_data(write_u8, room_index_ptr, self.test_room_args["room"])
-  self.dol.write_data(write_u8, spawn_id_ptr, self.test_room_args["spawn"])
 
-def fix_forsaken_fortress_door_softlock(self):
-  # Fix a bug where entering Forsaken Fortress via the left half of the big door on the second floor (the one you'd normally only exit from and not go back through) would softlock the game.
-  # Because of the changes to Link's pushing animation (see increase_block_moving_animation), entering via the left half doesn't make Link walk as far into the door as entering via the right half does.
-  # As a result, Link will wind up a couple units short of standing on top of the collision triangles that have an exit index set, softlocking the game because a transition never occurs, but the door animation never ends either.
-  # To fix this, we simply make one more collision triangle have the property with an exit index set, so that Link doesn't need to go as far inside the door for the transition to happen.
-  
-  face_index = 0x1493
-  new_property_index = 0x11
-  
-  ff_dzb = self.get_arc("files/res/Stage/sea/Room1.arc").get_file_entry("room.dzb")
-  ff_dzb.decompress_data_if_necessary()
-  face_list_offset = read_u32(ff_dzb.data, 0xC)
-  face_offset = face_list_offset + face_index*0xA
-  write_u16(ff_dzb.data, face_offset+6, new_property_index)
+def prevent_fire_mountain_lava_softlock(randomizer: 'Randomizer'):
+    # Sometimes when spawning from spawn ID 0 outside fire mountain, the player will get stuck in an infinite loop of taking damage from lava.
+    # The reason for this is that when the player enters the sea stage, the ship is spawned in at its new game starting position (either Outset or a randomized starting island) and the player is put on the ship.
+    # Then after a frame or two the ship is teleported to its proper spawn position near the island the player is supposed to be on, along with the player.
+    # The game's collision detection system draws a huge line between where the player was a frame ago (starting island) and where the player is right now (whatever the correct island is, such as Fire Mountain).
+    # If that collision line happens to pass through the Fire Mountain volcano, the player will be considered to be standing on the volcano for one frame.
+    # Because the volcano's collision is set to have the lava attribute, this results in the player taking lava damage.
+    # In order to avoid this, the Y coordinate of the ship's position when starting a new game is simply moved down to be extremely far below the ocean surface. This is so that any collision line in between it and any of the various other ship spawns will not hit anything at all.
+    # This does not result in the ship actually visibly spawning far below the sea when you start a new game, because the sea actor is smart enough to instantly teleport the ship on top whenever it falls below the surface.
 
-def add_new_bog_warp(self):
-  # Adds a new Ballad of Gales warp point destination to Forsaken Fortress.
-  # To do this we must relocate the lists with data for each warp to free space, modify the code to use the relocated lists, and modify the code to loop the number of times counting the new warp, instead of only the vanilla number of times.
-  # We also must add a new message for the confirmation dialog to display when the player select the Forsaken Fortress warp.
-  # (Note that the actual warp spawn point in Forsaken Fortress already existed in the vanilla game unused, so we don't need to add that, it already works perfectly.)
-  
-  new_num_warps = 10
-  
-  # Update the pointers to the warp table in various pieces of code to point to a custom one.
-  custom_warp_table_address = self.main_custom_symbols["ballad_of_gales_warp_table"]
-  high_halfword, low_halfword = patcher.split_pointer_into_high_and_low_half_for_hardcoding(custom_warp_table_address)
-  for code_address in [0x801B96DC, 0x801B96F0, 0x801B9790]:
-    self.dol.write_data(write_u16, code_address+2, high_halfword)
-    self.dol.write_data(write_u16, code_address+6, low_halfword)
-  
-  # Update the pointers to the float bank of X/Y positions for the warp icons to point to a custom one.
-  custom_warp_float_bank_address = self.main_custom_symbols["ballad_of_gales_warp_float_bank"]
-  high_halfword, low_halfword = patcher.split_pointer_into_high_and_low_half_for_hardcoding(custom_warp_float_bank_address)
-  for code_address in [0x801B9360, 0x801B7C28]:
-    self.dol.write_data(write_u16, code_address+2, high_halfword)
-    self.dol.write_data(write_u16, code_address+6, low_halfword)
-  
-  # Update the offsets relative to the float bank symbol since they're all going to be completely different in the custom float bank compared to the original one.
-  self.dol.write_data(write_u16, 0x801B7C3C+2, 0) # Reading X positions in dMenu_Fmap_c::init_warpMode
-  self.dol.write_data(write_u16, 0x801B7C44+2, new_num_warps*4) # Reading Y positions in dMenu_Fmap_c::init_warpMode
-  self.dol.write_data(write_u16, 0x801B9378+2, 0) # Reading X positions in dMenu_Fmap_c::warpAreaAnime0
-  self.dol.write_data(write_u16, 0x801B9380+2, new_num_warps*4) # Reading Y positions in dMenu_Fmap_c::warpAreaAnime0
-  self.dol.write_data(write_u16, 0x801B93A4+2, new_num_warps*2*4) # Reading unknown value in dMenu_Fmap_c::warpAreaAnime0
-  self.dol.write_data(write_u16, 0x801B93C8+2, new_num_warps*2*4 + 4) # Reading unknown value in dMenu_Fmap_c::warpAreaAnime0
-  
-  # These handle displaying the spinning warp icons on the warp select screen.
-  self.dol.write_data(write_u16, 0x801B7988+2, new_num_warps) # dMenu_Fmap_c::_open_warpMode
-  self.dol.write_data(write_u16, 0x801B7C80+2, new_num_warps) # dMenu_Fmap_c::init_warpMode
-  
-  # These handle moving the cursor on the currently selected warp on the warp select screen.
-  # They also seem to handle deleting the spinning warp icons when you exit the screen.
-  self.dol.write_data(write_u16, 0x801B8414+2, new_num_warps) # dMenu_Fmap_c::wrapMove
-  self.dol.write_data(write_u16, 0x801B84D0+2, new_num_warps) # dMenu_Fmap_c::wrapMove
-  
-  # Necessary for the 10th warp to work correctly.
-  self.dol.write_data(write_u16, 0x801B979C+2, new_num_warps) # dMenu_Fmap_c::getWarpAreaTablePtr
-  
-  # Handles something when you open the warp select screen.
-  self.dol.write_data(write_u16, 0x801B6E6C+2, new_num_warps) # dMenu_Fmap_c::paneTranceZoomMap
-  
-  # Handles something when you cancel a warp at the confirmation prompt.
-  self.dol.write_data(write_u16, 0x801B9020+2, new_num_warps) # dMenu_Fmap_c::wrapSelWinFadeOut
-  
-  # Handles something when you confirm a warp at the confirmation prompt.
-  self.dol.write_data(write_u16, 0x801B9230+2, new_num_warps) # dMenu_Fmap_c::wrapSelWarp
-  
-  # Handles highlighting the currently selected warp icon.
-  self.dol.write_data(write_u16, 0x801B936C+2, new_num_warps) # dMenu_Fmap_c::warpAreaAnime0
-  
-  # Note: The place in memory that stores pointers to the spinning warp icon particle emitter seems to have room for 12 warps total. So we could theoretically add 3 new warps without issue instead of just 1. But any more than that won't work.
-  # Example of code dealing with this list: 801BA0F4 stores the emitter pointer to that list.
-  
-  # Add a new message for the text in the confirmation dialog when selecting the new warp.
-  msg = self.bmg.add_new_message(848)
-  msg.string = "Warp to \\{1A 06 FF 00 00 01}Forsaken Fortress\\{1A 06 FF 00 00 00}?"
-  msg.text_box_type = 0 # Dialog
-  msg.initial_draw_type = 1 # Instant message speed
-  msg.text_box_position = 2 # Centered
-  msg.num_lines_per_box = 2
+    sea_dzs = randomizer.get_arc("files/res/Stage/sea/Stage.arc").get_file("stage.dzs")
+    sea_actors = sea_dzs.entries_by_type("ACTR")
+    ship_actor = next(x for x in sea_actors if x.name == "Ship")
+    ship_actor.y_pos = -500000
+    ship_actor.save_changes()
 
-def make_rat_holes_visible_from_behind(self):
-  # Change the cull mode on the rat hole model from backface culling to none.
-  # This is so the hole is visible from behind in enemy rando.
-  data = self.get_arc("files/res/Object/Nzg.arc").get_file_entry("kana_00.bdl").data
-  write_u32(data, 0xC80, 0x00) # Change cull mode in the MAT3 section
-  write_u8(data, 0xFCE, 0x04) # Change cull mode in the MDL3 section
 
-def enable_developer_mode(self):
-  # This enables the developer mode left in the game's code.
-  
-  self.dol.write_data(write_u8, 0x803F60E0, 1) # mDoMain::developmentMode(void)
+def add_chest_in_place_of_jabun_cutscene(randomizer: 'Randomizer'):
+    # Add a chest on a raft to Jabun's cave to replace the cutscene item you would normally get there.
 
-def enable_heap_display(self):
-  # Enables the heap display left in the game's code for viewing how much memory is free in real time.
-  
-  boot_data = self.get_raw_file("sys/boot.bin")
-  
-  # Change a variable in the ISO header to allow the heap display to be used.
-  write_u8(boot_data, 0x07, 0x91)
-  
-  # Default the heap display to on when booting up the game so it doesn't need to be toggled on with R+Z on controller 3.
-  self.dol.write_data(write_u8, 0x800063E7, 1) # Hardcoded default value for mDisplayHeapSize (in func main01)
-  
-  # Default tab of the heap display to 1 instead of 4 so it doesn't need to be changed with L+Z on controller 3.
-  self.dol.write_data(write_u8, 0x803F60E8, 1) # mHeapBriefType
-  
-  # Remove a check that a controller must be connected to port 3 for the heap display to be shown.
-  self.dol.write_data(write_u32, 0x800084A0, 0x60000000) # nop (in mDoGph_AfterOfDraw)
+    jabun_dzr = randomizer.get_arc("files/res/Stage/Pjavdou/Room0.arc").get_file("room.dzr")
 
-def add_failsafe_id_0_spawns(self):
-  # Add spawns with spawn ID 0 to any rooms that didn't originally have them.
-  # This is so anything that assumes all rooms have a spawn with ID 0 (for example, Floormasters that don't have an explicit exit set for when they capture you) doesn't crash the game.
-  
-  # For rooms that already had a spawn in them, copy the existing spawn.
-  spawns_to_copy = [
-    ("Asoko", 0, 255),
-    ("I_TestM", 0, 1),
-    ("M_Dai", 20, 23),
-    ("M_NewD2", 1, 20),
-    ("M_NewD2", 2, 1),
-    ("M_NewD2", 3, 6),
-    ("M_NewD2", 4, 7),
-    ("M_NewD2", 6, 9),
-    ("M_NewD2", 8, 14),
-    ("M_NewD2", 11, 2),
-    ("M_NewD2", 12, 3),
-    ("M_NewD2", 13, 4),
-    ("M_NewD2", 14, 5),
-    ("M_NewD2", 15, 18),
-    ("TF_06", 1, 1),
-    ("TF_06", 2, 2),
-    ("TF_06", 3, 2),
-    ("TF_06", 4, 2),
-    ("TF_06", 5, 2),
-    ("TF_06", 6, 6),
-    ("ma2room", 1, 2),
-    ("ma2room", 2, 15), # Front door
-    ("ma2room", 3, 9), # In the water
-    ("ma2room", 4, 6),
-    ("ma3room", 1, 2),
-    ("ma3room", 2, 15), # Front door
-    ("ma3room", 3, 9), # In the water
-    ("ma3room", 4, 6),
-    ("majroom", 1, 2),
-    ("majroom", 2, 15), # Front door
-    ("majroom", 3, 9), # In the water
-    ("majroom", 4, 6),
-  ]
-  
-  for stage_name, room_number, spawn_id_to_copy in spawns_to_copy:
-    dzr = self.get_arc("files/res/Stage/%s/Room%d.arc" % (stage_name, room_number)).get_file("room.dzr")
-    spawns = dzr.entries_by_type("PLYR")
-    spawn_to_copy = next(spawn for spawn in spawns if spawn.spawn_id == spawn_id_to_copy)
-    
-    new_spawn = dzr.add_entity("PLYR", layer=None)
-    new_spawn.spawn_type = spawn_to_copy.spawn_type
-    new_spawn.room_num = spawn_to_copy.room_num
-    new_spawn.x_pos = spawn_to_copy.x_pos
-    new_spawn.y_pos = spawn_to_copy.y_pos
-    new_spawn.z_pos = spawn_to_copy.z_pos
-    new_spawn.y_rot = spawn_to_copy.y_rot
-    new_spawn.spawn_id = 0
-    
-    dzr.save_changes()
-  
-  # For rooms that didn't have any existing spawn in them, add a new spawn, automatically placed in front of a door.
-  rooms_to_add_new_spawns_to = [
-    ("TF_01", 1),
-    ("TF_01", 2),
-    ("TF_01", 3),
-    ("TF_01", 4),
-    ("TF_01", 5),
-    ("TF_01", 6),
-    ("TF_02", 1),
-    ("TF_02", 2),
-    ("TF_02", 3),
-    ("TF_02", 4),
-    ("TF_02", 5),
-    ("TF_02", 6),
-  ]
-  
-  for stage_name, room_number in rooms_to_add_new_spawns_to:
-    dzr = self.get_arc("files/res/Stage/%s/Room%d.arc" % (stage_name, room_number)).get_file("room.dzr")
-    spawns = dzr.entries_by_type("PLYR")
-    
-    dzs = self.get_arc("files/res/Stage/%s/Stage.arc" % stage_name).get_file("stage.dzs")
-    doors = dzs.entries_by_type("TGDR")
-    spawn_dist_from_door = 200
-    x_pos = None
-    y_pos = None
-    z_pos = None
-    y_rot = None
-    for door in doors:
-      assert door.actor_class_name == "d_a_door10"
-      if door.from_room_num == room_number or door.to_room_num == room_number:
-        y_rot = door.y_rot
-        if door.from_room_num != room_number:
-          y_rot = (y_rot + 0x8000) % 0x10000
-        y_rot_degrees = y_rot * (90.0 / 0x4000)
-        x_offset = math.sin(math.radians(y_rot_degrees)) * spawn_dist_from_door
-        z_offset = math.cos(math.radians(y_rot_degrees)) * spawn_dist_from_door
-        x_pos = door.x_pos + x_offset
-        y_pos = door.y_pos
-        z_pos = door.z_pos + z_offset
-        break
-    
-    new_spawn = dzr.add_entity("PLYR", layer=None)
-    new_spawn.spawn_type = 0
-    new_spawn.room_num = room_number
-    new_spawn.x_pos = x_pos
-    new_spawn.y_pos = y_pos
-    new_spawn.z_pos = z_pos
-    new_spawn.y_rot = y_rot
-    new_spawn.spawn_id = 0
-    
-    dzr.save_changes()
+    raft = jabun_dzr.add_entity("ACTR", layer=None)
+    raft.name = "Ikada"
+    raft.y_rot = 0x8000
 
-def remove_minor_panning_cutscenes(self):
-  panning_cutscenes = [
-    ("M_NewD2", "Room2", 4),
-    ("kindan", "Stage", 2),
-    ("Siren", "Room18", 2),
-    ("M_Dai", "Room3", 7),
-    ("sea", "Room41", 19),
-    ("sea", "Room41", 22),
-    ("sea", "Room41", 23),
-  ]
-  
-  for stage_name, arc_name, evnt_index in panning_cutscenes:
-    arc = self.get_arc("files/res/Stage/%s/%s.arc" % (stage_name, arc_name))
-    if arc_name == "Stage":
-      dzx = arc.get_file("stage.dzs")
-    else:
-      dzx = arc.get_file("room.dzr")
-    
-    tagevs = [x for x in dzx.entries_by_type("SCOB") if x.name == "TagEv"]
-    for tagev in tagevs:
-      if tagev.evnt_index == evnt_index:
-        dzx.remove_entity(tagev, "SCOB")
-    
-    spawns = dzx.entries_by_type("PLYR")
-    for spawn in spawns:
-      if spawn.evnt_index == evnt_index:
-        spawn.evnt_index = 0xFF
-        spawn.save_changes()
+    # Turn wind on inside the cave so that the flag on the raft blows in the wind.
+    # Otherwise it clips inside the flagpole and looks bad.
+    room_props = jabun_dzr.entries_by_type("FILI")[0]
+    room_props.wind_type = 0  # Weakest wind (0.3 strength)
 
-def add_custom_actor_rels(self):
-  # Add the custom switch operator REL to the game.
-  switch_op_rel_path = os.path.join(ASM_PATH, "d_a_switch_op.rel")
-  switch_op_rel = REL()
-  switch_op_rel.read_from_file(switch_op_rel_path)
-  self.add_new_rel(
-    "files/rels/d_a_switch_op.rel",
-    switch_op_rel,
-    section_index_of_actor_profile = 2,
-    offset_of_actor_profile = 0,
-  )
+    jabun_chest = jabun_dzr.add_entity("TRES", layer=None)
+    jabun_chest.name = "takara3"
+    jabun_chest.params = 0xFF000000
+    jabun_chest.switch_to_set = 0xFF
+    jabun_chest.chest_type = 2
+    jabun_chest.appear_condition_switch = 0xFF
+    jabun_chest.opened_flag = 6
+    jabun_chest.behavior_type = 5  # Necessary for the chest to bob up and down with the raft it's on
+    jabun_chest.x_pos = 0
+    jabun_chest.y_pos = 300
+    jabun_chest.z_pos = -200
+    jabun_chest.room_num = 0
+    jabun_chest.y_rot = 0x8000
+    jabun_chest.item_id = randomizer.item_name_to_id["Nayru's Pearl"]
 
-def fix_message_closing_sound_on_quest_status_screen(self):
-  # Fix an issue where the message box closing sound effect would play when opening the quest status pause screen.
-  # This issue is caused by the "Options" button on the quest status screen trying to use message ID 704 for its description when you select it, but there is no message with ID 704, so it returns the last message (the message with the highest index) instead.
-  # If that last message has a Textbox Style of one of: Dialog, Special, Hint, or Wind Waker Song, and the message displays instantly in a single frame, then it would open and close on the frame the quest status screen is loading, causing that sound to be played.
-  # To fix this we simply add a blank message with ID 704 and give it a textbox style that isn't affected by the issue.
-  
-  msg = self.bmg.add_new_message(704)
-  msg.string = ""
-  msg.text_box_type = 9 # Item get message box
+    jabun_dzr.save_changes()
 
-def fix_stone_head_bugs(self):
-  # Unset the actor status bit for stone heads that makes them not execute on frames where they didn't draw because they weren't in view of the camera.
-  # The fact that they don't execute when you're not looking at them can cause various bugs.
-  # One of which is that, for the ones that spawn enemies, they set themselves as being enemy-type actors. They only delete themselves after the enemy they spawn is killed and not at the moment the stone head actually breaks. So "kill all enemies" rooms, you would need to look at the empty spot where the stone head broke apart after killing the enemy it spawned in order for all "enemies" to be considered dead.
-  
-  head_rel = self.get_rel("files/rels/d_a_obj_homen.rel")
-  
-  status_bits = head_rel.read_data(read_u32, 0x3450)
-  status_bits &= ~0x00000080
-  head_rel.write_data(write_u32, 0x3450, status_bits)
+    # Also move the big stone door and whirlpool blocking Jabun's cave entrance from layer 5 to the default layer.
+    # This is so they appear during the day too, not just at night.
+    outset_dzr = randomizer.get_arc("files/res/Stage/sea/Room44.arc").get_file("room.dzr")
 
-def show_number_of_tingle_statues_on_quest_status_screen(self):
-  # Replaces the visuals of the treasure chart counter on the quest status creen with visuals for a tingle statue counter.
-  # That chart counter is redundant since it shows the same number on the chart screen.
-  # (The actual counter number itself is modified via asm.)
-  
-  # Replace the treasure chart item icon on the quest screen with the tingle statue icon.
-  self.dol.write_data(write_str, 0x8035F469, "tingle_figure.bti", 0x13)
-  
-  # Update the "Treasure Chart" text at the bottom of the screen.
-  msg = self.bmg.messages_by_id[503]
-  msg.string = "Tingle Statues"
-  
-  # Update the treasure chart description with custom text for tingle statues.
-  msg = self.bmg.messages_by_id[703]
-  msg.string = word_wrap_string(
-    "Golden statues of a mysterious dashing figure. They can be traded to \\{1A 06 FF 00 00 01}Ankle\\{1A 06 FF 00 00 00} on \\{1A 06 FF 00 00 01}Tingle Island\\{1A 06 FF 00 00 00} for a reward!",
-    max_line_length=43
-  )
+    layer_5_actors = outset_dzr.entries_by_type_and_layer("ACTR", 5)
+    layer_5_door = next(x for x in layer_5_actors if x.name == "Ajav")
+    layer_5_whirlpool = next(x for x in layer_5_actors if x.name == "Auzu")
 
-def add_shortcut_warps_into_dungeons(self):
-  # Add shortcut warps to more quickly re-enter dungeons from the shore after you've already entered them once.
-  
-  fh_entrance_touched_switch = 0x7F # This switch on the sea should be unused in the vanilla game.
-  fh_entrance_scls_exit_index = 6
-  
-  fh_dzr = self.get_arc("files/res/Stage/sea/Room41.arc").get_file("room.dzr")
-  
-  # Add a white light beam warp to the shore of Forest Haven that takes you into the dungeon.
-  # This is disabled at first, it becomes active after a switch is set when you've entered the dungeon once normally.
-  # (Looks kinda weird since the model doesn't reach all the way up to the sky. Scaling it scales the model, but not the cull box.)
-  # This will take the player into whatever the entrance is randomized to lead to, not just Forbidden Woods.
-  warp = fh_dzr.add_entity("SCOB", layer=None)
-  warp.name = "Ysdls00"
-  warp.type = 1 # White warp
-  warp.activation_switch = fh_entrance_touched_switch
-  warp.exit_index = fh_entrance_scls_exit_index
-  warp.activated_event_index = 0xFF
-  warp.x_pos = 217178.1
-  warp.y_pos = 34.99997
-  warp.z_pos = 195407.7
-  
-  # Add a SW_C00 (switch setting trigger region) around the entrance to the dungeon.
-  # This will set the switch when the player enters the dungeon, enabling the warp for later use.
-  swc00 = fh_dzr.add_entity("SCOB", layer=None)
-  swc00.name = "SW_C00"
-  swc00.switch_to_set = fh_entrance_touched_switch
-  swc00.behavior_type = 3 # Don't unset the switch when leaving the region
-  swc00.prerequisite_switch = 0xFF
-  swc00.x_pos = 196755.7
-  swc00.y_pos = 2952.929
-  swc00.z_pos = 198147.1
-  swc00.scale_x = 3 * 0x10
-  swc00.scale_y = 3 * 0x10
-  swc00.scale_z = 3 * 0x10
-  
-  fh_dzr.save_changes()
+    layer_none_door = outset_dzr.add_entity("ACTR", layer=None)
+    layer_none_door.name = layer_5_door.name
+    layer_none_door.params = layer_5_door.params
+    layer_none_door.x_pos = layer_5_door.x_pos
+    layer_none_door.y_pos = layer_5_door.y_pos
+    layer_none_door.z_pos = layer_5_door.z_pos
+    layer_none_door.x_rot = layer_5_door.x_rot
+    layer_none_door.y_rot = layer_5_door.y_rot
+    layer_none_door.z_rot = layer_5_door.z_rot
+    layer_none_door.enemy_number = layer_5_door.enemy_number
 
-def use_english_debug_menu(self):
-  english_menu_path = os.path.join(DATA_PATH, "Menu1.dat")
-  with open(english_menu_path, "rb") as f:
-    english_menu = BytesIO(f.read())
-  self.replace_raw_file("files/res/Menu/Menu1.dat", english_menu)
+    layer_none_whirlpool = outset_dzr.add_entity("ACTR", layer=None)
+    layer_none_whirlpool.name = layer_5_whirlpool.name
+    layer_none_whirlpool.params = layer_5_whirlpool.params
+    layer_none_whirlpool.x_pos = layer_5_whirlpool.x_pos
+    layer_none_whirlpool.y_pos = layer_5_whirlpool.y_pos
+    layer_none_whirlpool.z_pos = layer_5_whirlpool.z_pos
+    layer_none_whirlpool.x_rot = layer_5_whirlpool.x_rot
+    layer_none_whirlpool.y_rot = layer_5_whirlpool.y_rot
+    layer_none_whirlpool.z_rot = layer_5_whirlpool.z_rot
+    layer_none_whirlpool.enemy_number = layer_5_whirlpool.enemy_number
+
+    outset_dzr.remove_entity(layer_5_door, "ACTR", layer=5)
+    outset_dzr.remove_entity(layer_5_whirlpool, "ACTR", layer=5)
+
+    outset_dzr.save_changes()
+
+    # Also modify the event that happens when you destroy the big stone door so that KoRL doesn't automatically enter the cave.
+    event_list = randomizer.get_arc("files/res/Stage/sea/Stage.arc").get_file("event_list.dat")
+    unlock_cave_event = event_list.events_by_name["ajav_uzu"]
+    director = next(actor for actor in unlock_cave_event.actors if actor.name == "DIRECTOR")
+    camera = next(actor for actor in unlock_cave_event.actors if actor.name == "CAMERA")
+    ship = next(actor for actor in unlock_cave_event.actors if actor.name == "Ship")
+
+    director.actions = director.actions[0:1]
+    camera.actions = camera.actions[0:2]
+    ship.actions = ship.actions[0:2]
+    unlock_cave_event.ending_flags = [
+        director.actions[-1].flag_id_to_set,
+        camera.actions[-1].flag_id_to_set,
+        -1
+    ]
+
+
+def add_chest_in_place_of_master_sword(randomizer: 'Randomizer'):
+    # Add a chest to the Master Sword chamber that only materializes after you beat the Mighty Darknuts there.
+
+    ms_chamber_dzr = randomizer.get_arc("files/res/Stage/kenroom/Room0.arc").get_file("room.dzr")
+
+    # Remove the Master Sword entities.
+    ms_actors = [x for x in ms_chamber_dzr.entries_by_type_and_layer("ACTR", None) if x.name in ["VmsMS", "VmsDZ"]]
+    for actor in ms_actors:
+        ms_chamber_dzr.remove_entity(actor, "ACTR", layer=None)
+
+    # Copy the entities necessary for the Mighty Darknuts fight from layer 5 to the default layer.
+    layer_5_actors = ms_chamber_dzr.entries_by_type_and_layer("ACTR", 5)
+    layer_5_actors_to_copy = [x for x in layer_5_actors if x.name in ["Tn", "ALLdie", "Yswdr00"]]
+
+    for orig_actor in layer_5_actors_to_copy:
+        new_actor = ms_chamber_dzr.add_entity("ACTR", layer=None)
+        new_actor.name = orig_actor.name
+        new_actor.params = orig_actor.params
+        new_actor.x_pos = orig_actor.x_pos
+        new_actor.y_pos = orig_actor.y_pos
+        new_actor.z_pos = orig_actor.z_pos
+        new_actor.x_rot = orig_actor.x_rot
+        new_actor.y_rot = orig_actor.y_rot
+        new_actor.z_rot = orig_actor.z_rot
+        new_actor.enemy_number = orig_actor.enemy_number
+
+    # Remove the entities on layer 5 that are no longer necessary.
+    for orig_actor in layer_5_actors:
+        ms_chamber_dzr.remove_entity(orig_actor, "ACTR", layer=5)
+
+    # Add the chest.
+    ms_chest = ms_chamber_dzr.add_entity("TRES", layer=None)
+    ms_chest.name = "takara3"
+    ms_chest.params = 0xFF000000
+    ms_chest.switch_to_set = 0xFF
+    ms_chest.chest_type = 2
+    ms_chest.appear_condition_switch = 5  # The Mighty Darknuts set switch 5 when they die.
+    ms_chest.opened_flag = 0
+    ms_chest.behavior_type = 4
+    ms_chest.x_pos = -123.495
+    ms_chest.y_pos = -3220
+    ms_chest.z_pos = -7787.13 - 50
+    ms_chest.room_num = 0
+    ms_chest.y_rot = 0x0000
+    ms_chest.item_id = randomizer.item_name_to_id["Progressive Sword"]
+
+    # Normally if the player saves and reloads or dies and respawns in this fight, they'll be put right back into it.
+    # But that would be bad in swordless mode since the player might not have anything to kill the Darknuts with and be stuck forever.
+    # So the spawn is moved back away from the fight's trigger area so that the player isn't forced back into the fight immediately.
+    spawn = next(spawn for spawn in ms_chamber_dzr.entries_by_type("PLYR") if spawn.spawn_id == 10)
+    spawn.y_pos = -2949.39
+    spawn.z_pos = -4240.7
+
+    ms_chamber_dzr.save_changes()
+
+
+def update_beedle_spoil_selling_text(randomizer: 'Randomizer'):
+    # Update Beedle's dialogue when you try to sell something to him so he mentions he doesn't want Blue Chu Jelly.
+    msg = randomizer.bmg.messages_by_id[3957]
+    lines = msg.string.split("\n")
+    lines[2] = "And no Blue Chu Jelly, either!"
+    msg.string = "\n".join(lines)
+
+
+def fix_totg_warp_out_spawn_pos(randomizer: 'Randomizer'):
+    # Normally the spawn point used when the player teleports out after beating the dungeon boss would put the player right on top of the Hyrule warp, which takes the player there immediately if it's active.
+    # Move the spawn forward a bit to avoid to avoid this.
+
+    dzr = randomizer.get_arc("files/res/Stage/sea/Room26.arc").get_file("room.dzr")
+    spawn = next(x for x in dzr.entries_by_type("PLYR") if x.spawn_id == 1)
+    spawn.z_pos += 1000.0
+    spawn.save_changes()
+
+
+def remove_phantom_ganon_requirement_from_eye_reefs(randomizer: 'Randomizer'):
+    # Go through all the eye reef cannons that don't appear until you defeat Phantom Ganon and remove that switch requirement.
+
+    for island_number in [24, 46, 22, 8, 37, 25]:
+        eye_reef_dzr = randomizer.get_arc("files/res/Stage/sea/Room%d.arc" % island_number).get_file("room.dzr")
+        actors = eye_reef_dzr.entries_by_type("ACTR")
+        cannons = [x for x in actors if x.name == "Ocanon"]
+        for cannon in cannons:
+            if cannon.enable_spawn_switch == 0x2A:  # Switch 2A is Phantom Ganon being dead.
+                cannon.enable_spawn_switch = 0xFF
+                cannon.save_changes()
+        gunboats = [x for x in actors if x.name == "Oship"]
+        for gunboat in gunboats:
+            if (gunboat.x_rot & 0xFF) == 0x2A:  # Switch 2A is Phantom Ganon being dead.
+                gunboat.x_rot = (gunboat.x_rot & 0xFF00) | 0xFF
+                gunboat.save_changes()
+
+
+def test_room(randomizer: 'Randomizer'):
+    patcher.apply_patch(randomizer, "test_room")
+
+    stage_name_ptr = randomizer.main_custom_symbols["test_room_stage_name"]
+    room_index_ptr = randomizer.main_custom_symbols["test_room_room_index"]
+    spawn_id_ptr = randomizer.main_custom_symbols["test_room_spawn_id"]
+
+    randomizer.dol.write_data(write_str, stage_name_ptr, randomizer.test_room_args["stage"], 8)
+    randomizer.dol.write_data(write_u8, room_index_ptr, randomizer.test_room_args["room"])
+    randomizer.dol.write_data(write_u8, spawn_id_ptr, randomizer.test_room_args["spawn"])
+
+
+def fix_forsaken_fortress_door_softlock(randomizer: 'Randomizer'):
+    # Fix a bug where entering Forsaken Fortress via the left half of the big door on the second floor (the one you'd normally only exit from and not go back through) would softlock the game.
+    # Because of the changes to Link's pushing animation (see increase_block_moving_animation), entering via the left half doesn't make Link walk as far into the door as entering via the right half does.
+    # As a result, Link will wind up a couple units short of standing on top of the collision triangles that have an exit index set, softlocking the game because a transition never occurs, but the door animation never ends either.
+    # To fix this, we simply make one more collision triangle have the property with an exit index set, so that Link doesn't need to go as far inside the door for the transition to happen.
+
+    face_index = 0x1493
+    new_property_index = 0x11
+
+    ff_dzb = randomizer.get_arc("files/res/Stage/sea/Room1.arc").get_file_entry("room.dzb")
+    ff_dzb.decompress_data_if_necessary()
+    face_list_offset = read_u32(ff_dzb.data, 0xC)
+    face_offset = face_list_offset + face_index * 0xA
+    write_u16(ff_dzb.data, face_offset + 6, new_property_index)
+
+
+def add_new_bog_warp(randomizer: 'Randomizer'):
+    # Adds a new Ballad of Gales warp point destination to Forsaken Fortress.
+    # To do this we must relocate the lists with data for each warp to free space, modify the code to use the relocated lists, and modify the code to loop the number of times counting the new warp, instead of only the vanilla number of times.
+    # We also must add a new message for the confirmation dialog to display when the player select the Forsaken Fortress warp.
+    # (Note that the actual warp spawn point in Forsaken Fortress already existed in the vanilla game unused, so we don't need to add that, it already works perfectly.)
+
+    new_num_warps = 10
+
+    # Update the pointers to the warp table in various pieces of code to point to a custom one.
+    custom_warp_table_address = randomizer.main_custom_symbols["ballad_of_gales_warp_table"]
+    high_halfword, low_halfword = patcher.split_pointer_into_high_and_low_half_for_hardcoding(custom_warp_table_address)
+    for code_address in [0x801B96DC, 0x801B96F0, 0x801B9790]:
+        randomizer.dol.write_data(write_u16, code_address + 2, high_halfword)
+        randomizer.dol.write_data(write_u16, code_address + 6, low_halfword)
+
+    # Update the pointers to the float bank of X/Y positions for the warp icons to point to a custom one.
+    custom_warp_float_bank_address = randomizer.main_custom_symbols["ballad_of_gales_warp_float_bank"]
+    high_halfword, low_halfword = patcher.split_pointer_into_high_and_low_half_for_hardcoding(
+        custom_warp_float_bank_address)
+    for code_address in [0x801B9360, 0x801B7C28]:
+        randomizer.dol.write_data(write_u16, code_address + 2, high_halfword)
+        randomizer.dol.write_data(write_u16, code_address + 6, low_halfword)
+
+    # Update the offsets relative to the float bank symbol since they're all going to be completely different in the custom float bank compared to the original one.
+    randomizer.dol.write_data(write_u16, 0x801B7C3C + 2, 0)  # Reading X positions in dMenu_Fmap_c::init_warpMode
+    randomizer.dol.write_data(write_u16, 0x801B7C44 + 2,
+                              new_num_warps * 4)  # Reading Y positions in dMenu_Fmap_c::init_warpMode
+    randomizer.dol.write_data(write_u16, 0x801B9378 + 2, 0)  # Reading X positions in dMenu_Fmap_c::warpAreaAnime0
+    randomizer.dol.write_data(write_u16, 0x801B9380 + 2,
+                              new_num_warps * 4)  # Reading Y positions in dMenu_Fmap_c::warpAreaAnime0
+    randomizer.dol.write_data(write_u16, 0x801B93A4 + 2,
+                              new_num_warps * 2 * 4)  # Reading unknown value in dMenu_Fmap_c::warpAreaAnime0
+    randomizer.dol.write_data(write_u16, 0x801B93C8 + 2,
+                              new_num_warps * 2 * 4 + 4)  # Reading unknown value in dMenu_Fmap_c::warpAreaAnime0
+
+    # These handle displaying the spinning warp icons on the warp select screen.
+    randomizer.dol.write_data(write_u16, 0x801B7988 + 2, new_num_warps)  # dMenu_Fmap_c::_open_warpMode
+    randomizer.dol.write_data(write_u16, 0x801B7C80 + 2, new_num_warps)  # dMenu_Fmap_c::init_warpMode
+
+    # These handle moving the cursor on the currently selected warp on the warp select screen.
+    # They also seem to handle deleting the spinning warp icons when you exit the screen.
+    randomizer.dol.write_data(write_u16, 0x801B8414 + 2, new_num_warps)  # dMenu_Fmap_c::wrapMove
+    randomizer.dol.write_data(write_u16, 0x801B84D0 + 2, new_num_warps)  # dMenu_Fmap_c::wrapMove
+
+    # Necessary for the 10th warp to work correctly.
+    randomizer.dol.write_data(write_u16, 0x801B979C + 2, new_num_warps)  # dMenu_Fmap_c::getWarpAreaTablePtr
+
+    # Handles something when you open the warp select screen.
+    randomizer.dol.write_data(write_u16, 0x801B6E6C + 2, new_num_warps)  # dMenu_Fmap_c::paneTranceZoomMap
+
+    # Handles something when you cancel a warp at the confirmation prompt.
+    randomizer.dol.write_data(write_u16, 0x801B9020 + 2, new_num_warps)  # dMenu_Fmap_c::wrapSelWinFadeOut
+
+    # Handles something when you confirm a warp at the confirmation prompt.
+    randomizer.dol.write_data(write_u16, 0x801B9230 + 2, new_num_warps)  # dMenu_Fmap_c::wrapSelWarp
+
+    # Handles highlighting the currently selected warp icon.
+    randomizer.dol.write_data(write_u16, 0x801B936C + 2, new_num_warps)  # dMenu_Fmap_c::warpAreaAnime0
+
+    # Note: The place in memory that stores pointers to the spinning warp icon particle emitter seems to have room for 12 warps total. So we could theoretically add 3 new warps without issue instead of just 1. But any more than that won't work.
+    # Example of code dealing with this list: 801BA0F4 stores the emitter pointer to that list.
+
+    # Add a new message for the text in the confirmation dialog when selecting the new warp.
+    msg = randomizer.bmg.add_new_message(848)
+    msg.string = "Warp to \\{1A 06 FF 00 00 01}Forsaken Fortress\\{1A 06 FF 00 00 00}?"
+    msg.text_box_type = 0  # Dialog
+    msg.initial_draw_type = 1  # Instant message speed
+    msg.text_box_position = 2  # Centered
+    msg.num_lines_per_box = 2
+
+
+def make_rat_holes_visible_from_behind(randomizer: 'Randomizer'):
+    # Change the cull mode on the rat hole model from backface culling to none.
+    # This is so the hole is visible from behind in enemy rando.
+    data = randomizer.get_arc("files/res/Object/Nzg.arc").get_file_entry("kana_00.bdl").data
+    write_u32(data, 0xC80, 0x00)  # Change cull mode in the MAT3 section
+    write_u8(data, 0xFCE, 0x04)  # Change cull mode in the MDL3 section
+
+
+def enable_developer_mode(randomizer: 'Randomizer'):
+    # This enables the developer mode left in the game's code.
+
+    randomizer.dol.write_data(write_u8, 0x803F60E0, 1)  # mDoMain::developmentMode(void)
+
+
+def enable_heap_display(randomizer: 'Randomizer'):
+    # Enables the heap display left in the game's code for viewing how much memory is free in real time.
+
+    boot_data = randomizer.get_raw_file("sys/boot.bin")
+
+    # Change a variable in the ISO header to allow the heap display to be used.
+    write_u8(boot_data, 0x07, 0x91)
+
+    # Default the heap display to on when booting up the game so it doesn't need to be toggled on with R+Z on controller 3.
+    randomizer.dol.write_data(write_u8, 0x800063E7, 1)  # Hardcoded default value for mDisplayHeapSize (in func main01)
+
+    # Default tab of the heap display to 1 instead of 4 so it doesn't need to be changed with L+Z on controller 3.
+    randomizer.dol.write_data(write_u8, 0x803F60E8, 1)  # mHeapBriefType
+
+    # Remove a check that a controller must be connected to port 3 for the heap display to be shown.
+    randomizer.dol.write_data(write_u32, 0x800084A0, 0x60000000)  # nop (in mDoGph_AfterOfDraw)
+
+
+def add_failsafe_id_0_spawns(randomizer: 'Randomizer'):
+    # Add spawns with spawn ID 0 to any rooms that didn't originally have them.
+    # This is so anything that assumes all rooms have a spawn with ID 0 (for example, Floormasters that don't have an explicit exit set for when they capture you) doesn't crash the game.
+
+    # For rooms that already had a spawn in them, copy the existing spawn.
+    spawns_to_copy = [
+        ("Asoko", 0, 255),
+        ("I_TestM", 0, 1),
+        ("M_Dai", 20, 23),
+        ("M_NewD2", 1, 20),
+        ("M_NewD2", 2, 1),
+        ("M_NewD2", 3, 6),
+        ("M_NewD2", 4, 7),
+        ("M_NewD2", 6, 9),
+        ("M_NewD2", 8, 14),
+        ("M_NewD2", 11, 2),
+        ("M_NewD2", 12, 3),
+        ("M_NewD2", 13, 4),
+        ("M_NewD2", 14, 5),
+        ("M_NewD2", 15, 18),
+        ("TF_06", 1, 1),
+        ("TF_06", 2, 2),
+        ("TF_06", 3, 2),
+        ("TF_06", 4, 2),
+        ("TF_06", 5, 2),
+        ("TF_06", 6, 6),
+        ("ma2room", 1, 2),
+        ("ma2room", 2, 15),  # Front door
+        ("ma2room", 3, 9),  # In the water
+        ("ma2room", 4, 6),
+        ("ma3room", 1, 2),
+        ("ma3room", 2, 15),  # Front door
+        ("ma3room", 3, 9),  # In the water
+        ("ma3room", 4, 6),
+        ("majroom", 1, 2),
+        ("majroom", 2, 15),  # Front door
+        ("majroom", 3, 9),  # In the water
+        ("majroom", 4, 6),
+    ]
+
+    for stage_name, room_number, spawn_id_to_copy in spawns_to_copy:
+        dzr = randomizer.get_arc("files/res/Stage/%s/Room%d.arc" % (stage_name, room_number)).get_file("room.dzr")
+        spawns = dzr.entries_by_type("PLYR")
+        spawn_to_copy = next(spawn for spawn in spawns if spawn.spawn_id == spawn_id_to_copy)
+
+        new_spawn = dzr.add_entity("PLYR", layer=None)
+        new_spawn.spawn_type = spawn_to_copy.spawn_type
+        new_spawn.room_num = spawn_to_copy.room_num
+        new_spawn.x_pos = spawn_to_copy.x_pos
+        new_spawn.y_pos = spawn_to_copy.y_pos
+        new_spawn.z_pos = spawn_to_copy.z_pos
+        new_spawn.y_rot = spawn_to_copy.y_rot
+        new_spawn.spawn_id = 0
+
+        dzr.save_changes()
+
+    # For rooms that didn't have any existing spawn in them, add a new spawn, automatically placed in front of a door.
+    rooms_to_add_new_spawns_to = [
+        ("TF_01", 1),
+        ("TF_01", 2),
+        ("TF_01", 3),
+        ("TF_01", 4),
+        ("TF_01", 5),
+        ("TF_01", 6),
+        ("TF_02", 1),
+        ("TF_02", 2),
+        ("TF_02", 3),
+        ("TF_02", 4),
+        ("TF_02", 5),
+        ("TF_02", 6),
+    ]
+
+    for stage_name, room_number in rooms_to_add_new_spawns_to:
+        dzr = randomizer.get_arc("files/res/Stage/%s/Room%d.arc" % (stage_name, room_number)).get_file("room.dzr")
+        spawns = dzr.entries_by_type("PLYR")
+
+        dzs = randomizer.get_arc("files/res/Stage/%s/Stage.arc" % stage_name).get_file("stage.dzs")
+        doors = dzs.entries_by_type("TGDR")
+        spawn_dist_from_door = 200
+        x_pos = None
+        y_pos = None
+        z_pos = None
+        y_rot = None
+        for door in doors:
+            assert door.actor_class_name == "d_a_door10"
+            if door.from_room_num == room_number or door.to_room_num == room_number:
+                y_rot = door.y_rot
+                if door.from_room_num != room_number:
+                    y_rot = (y_rot + 0x8000) % 0x10000
+                y_rot_degrees = y_rot * (90.0 / 0x4000)
+                x_offset = math.sin(math.radians(y_rot_degrees)) * spawn_dist_from_door
+                z_offset = math.cos(math.radians(y_rot_degrees)) * spawn_dist_from_door
+                x_pos = door.x_pos + x_offset
+                y_pos = door.y_pos
+                z_pos = door.z_pos + z_offset
+                break
+
+        new_spawn = dzr.add_entity("PLYR", layer=None)
+        new_spawn.spawn_type = 0
+        new_spawn.room_num = room_number
+        new_spawn.x_pos = x_pos
+        new_spawn.y_pos = y_pos
+        new_spawn.z_pos = z_pos
+        new_spawn.y_rot = y_rot
+        new_spawn.spawn_id = 0
+
+        dzr.save_changes()
+
+
+def remove_minor_panning_cutscenes(randomizer: 'Randomizer'):
+    panning_cutscenes = [
+        ("M_NewD2", "Room2", 4),
+        ("kindan", "Stage", 2),
+        ("Siren", "Room18", 2),
+        ("M_Dai", "Room3", 7),
+        ("sea", "Room41", 19),
+        ("sea", "Room41", 22),
+        ("sea", "Room41", 23),
+    ]
+
+    for stage_name, arc_name, evnt_index in panning_cutscenes:
+        arc = randomizer.get_arc("files/res/Stage/%s/%s.arc" % (stage_name, arc_name))
+        if arc_name == "Stage":
+            dzx = arc.get_file("stage.dzs")
+        else:
+            dzx = arc.get_file("room.dzr")
+
+        tagevs = [x for x in dzx.entries_by_type("SCOB") if x.name == "TagEv"]
+        for tagev in tagevs:
+            if tagev.evnt_index == evnt_index:
+                dzx.remove_entity(tagev, "SCOB")
+
+        spawns = dzx.entries_by_type("PLYR")
+        for spawn in spawns:
+            if spawn.evnt_index == evnt_index:
+                spawn.evnt_index = 0xFF
+                spawn.save_changes()
+
+
+def add_custom_actor_rels(randomizer: 'Randomizer'):
+    # Add the custom switch operator REL to the game.
+    switch_op_rel_path = os.path.join(ASM_PATH, "d_a_switch_op.rel")
+    switch_op_rel = REL()
+    switch_op_rel.read_from_file(switch_op_rel_path)
+    randomizer.add_new_rel(
+        "files/rels/d_a_switch_op.rel",
+        switch_op_rel,
+        section_index_of_actor_profile=2,
+        offset_of_actor_profile=0,
+    )
+
+
+def fix_message_closing_sound_on_quest_status_screen(randomizer: 'Randomizer'):
+    # Fix an issue where the message box closing sound effect would play when opening the quest status pause screen.
+    # This issue is caused by the "Options" button on the quest status screen trying to use message ID 704 for its description when you select it, but there is no message with ID 704, so it returns the last message (the message with the highest index) instead.
+    # If that last message has a Textbox Style of one of: Dialog, Special, Hint, or Wind Waker Song, and the message displays instantly in a single frame, then it would open and close on the frame the quest status screen is loading, causing that sound to be played.
+    # To fix this we simply add a blank message with ID 704 and give it a textbox style that isn't affected by the issue.
+
+    msg = randomizer.bmg.add_new_message(704)
+    msg.string = ""
+    msg.text_box_type = 9  # Item get message box
+
+
+def fix_stone_head_bugs(randomizer: 'Randomizer'):
+    # Unset the actor status bit for stone heads that makes them not execute on frames where they didn't draw because they weren't in view of the camera.
+    # The fact that they don't execute when you're not looking at them can cause various bugs.
+    # One of which is that, for the ones that spawn enemies, they set themselves as being enemy-type actors. They only delete themselves after the enemy they spawn is killed and not at the moment the stone head actually breaks. So "kill all enemies" rooms, you would need to look at the empty spot where the stone head broke apart after killing the enemy it spawned in order for all "enemies" to be considered dead.
+
+    head_rel = randomizer.get_rel("files/rels/d_a_obj_homen.rel")
+
+    status_bits = head_rel.read_data(read_u32, 0x3450)
+    status_bits &= ~0x00000080
+    head_rel.write_data(write_u32, 0x3450, status_bits)
+
+
+def show_number_of_tingle_statues_on_quest_status_screen(randomizer: 'Randomizer'):
+    # Replaces the visuals of the treasure chart counter on the quest status creen with visuals for a tingle statue counter.
+    # That chart counter is redundant since it shows the same number on the chart screen.
+    # (The actual counter number itself is modified via asm.)
+
+    # Replace the treasure chart item icon on the quest screen with the tingle statue icon.
+    randomizer.dol.write_data(write_str, 0x8035F469, "tingle_figure.bti", 0x13)
+
+    # Update the "Treasure Chart" text at the bottom of the screen.
+    msg = randomizer.bmg.messages_by_id[503]
+    msg.string = "Tingle Statues"
+
+    # Update the treasure chart description with custom text for tingle statues.
+    msg = randomizer.bmg.messages_by_id[703]
+    msg.string = word_wrap_string(
+        "Golden statues of a mysterious dashing figure. They can be traded to \\{1A 06 FF 00 00 01}Ankle\\{1A 06 FF 00 00 00} on \\{1A 06 FF 00 00 01}Tingle Island\\{1A 06 FF 00 00 00} for a reward!",
+        max_line_length=43
+    )
+
+
+def add_shortcut_warps_into_dungeons(randomizer: 'Randomizer'):
+    # Add shortcut warps to more quickly re-enter dungeons from the shore after you've already entered them once.
+
+    fh_entrance_touched_switch = 0x7F  # This switch on the sea should be unused in the vanilla game.
+    fh_entrance_scls_exit_index = 6
+
+    fh_dzr = randomizer.get_arc("files/res/Stage/sea/Room41.arc").get_file("room.dzr")
+
+    # Add a white light beam warp to the shore of Forest Haven that takes you into the dungeon.
+    # This is disabled at first, it becomes active after a switch is set when you've entered the dungeon once normally.
+    # (Looks kinda weird since the model doesn't reach all the way up to the sky. Scaling it scales the model, but not the cull box.)
+    # This will take the player into whatever the entrance is randomized to lead to, not just Forbidden Woods.
+    warp = fh_dzr.add_entity("SCOB", layer=None)
+    warp.name = "Ysdls00"
+    warp.type = 1  # White warp
+    warp.activation_switch = fh_entrance_touched_switch
+    warp.exit_index = fh_entrance_scls_exit_index
+    warp.activated_event_index = 0xFF
+    warp.x_pos = 217178.1
+    warp.y_pos = 34.99997
+    warp.z_pos = 195407.7
+
+    # Add a SW_C00 (switch setting trigger region) around the entrance to the dungeon.
+    # This will set the switch when the player enters the dungeon, enabling the warp for later use.
+    swc00 = fh_dzr.add_entity("SCOB", layer=None)
+    swc00.name = "SW_C00"
+    swc00.switch_to_set = fh_entrance_touched_switch
+    swc00.behavior_type = 3  # Don't unset the switch when leaving the region
+    swc00.prerequisite_switch = 0xFF
+    swc00.x_pos = 196755.7
+    swc00.y_pos = 2952.929
+    swc00.z_pos = 198147.1
+    swc00.scale_x = 3 * 0x10
+    swc00.scale_y = 3 * 0x10
+    swc00.scale_z = 3 * 0x10
+
+    fh_dzr.save_changes()
+
+
+def use_english_debug_menu(randomizer: 'Randomizer'):
+    english_menu_path = os.path.join(DATA_PATH, "Menu1.dat")
+    with open(english_menu_path, "rb") as f:
+        english_menu = BytesIO(f.read())
+    randomizer.replace_raw_file("files/res/Menu/Menu1.dat", english_menu)

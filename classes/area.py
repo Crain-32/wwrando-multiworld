@@ -47,7 +47,7 @@ class Area:
         self.locations = list(map((lambda loc: loc.set_world_id(world_id)), self.locations))
         return self
 
-    def get_locations(self) -> list[Location]:
+    def get_locations(self) -> List[Location]:
         return self.locations
 
     def get_required_item_id(self, referenced_macros: Dict[AnyStr, Macro], connected_areas: List[AnyStr]) -> List[int]:

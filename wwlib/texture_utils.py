@@ -1336,7 +1336,7 @@ def hsv_shift_palette(colors, h_shift, v_shift):
   
   return colors
 
-def hsv_shift_color(color, h_shift, v_shift):
+def hsv_shift_color(color, h_shift: int, v_shift: int):
   if len(color) == 4:
     r, g, b, a = color
   else:

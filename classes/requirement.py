@@ -7,7 +7,7 @@ from logic.extras import *
 @dataclass
 class Requirement:
     type: AnyStr
-    args: List
+    args: List[Requirement]
 
     @classmethod
     def from_dict(cls, dict_obj) -> Requirement:
@@ -30,7 +30,7 @@ class Macro:
         )
 
 
-def parse_element(req_type: AnyStr, json_args) -> List[Any]:
+def parse_element(req_type: AnyStr, json_args) -> List[Requirement]:
     if len(json_args) == 0:
         raise RuntimeError("At least one Argument is Required to Parse an Element")
     elif req_type == REQUIREMENT_OR or req_type == REQUIREMENT_AND:

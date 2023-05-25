@@ -2,10 +2,12 @@
 from enum import Enum
 from io import BytesIO
 from collections import OrderedDict
+from typing import List
 
 from wwlib.bti import BTI
 
 from fs_helpers import *
+from wwlib.yaz0 import Yaz0
 
 IMPLEMENTED_CHUNK_TYPES = [
   "INF1",
@@ -1062,6 +1064,7 @@ class LoopMode(Enum):
   MIRRORED_ONCE = 3
   MIRRORED_REPEAT = 4
 
+
 class TangentType(Enum):
   IN     =   0
   IN_OUT =   1
@@ -1071,9 +1074,9 @@ class AnimationTrack:
   
   def __init__(self):
     self.tangent_type = TangentType.IN_OUT
-    self.keyframes = []
+    self.keyframes: List[AnimationKeyframe] = []
   
-  def read(self, data, offset, track_data):
+  def read(self, data, offset, track_data: List[int]) -> None:
     self.count = read_u16(data, offset+0)
     self.index = read_u16(data, offset+2)
     self.tangent_type = TangentType(read_u16(data, offset+4))
@@ -1094,7 +1097,7 @@ class AnimationTrack:
       else:
         raise Exception("Invalid tangent type")
   
-  def save_changes(self, data, offset, track_data):
+  def save_changes(self, data, offset, track_data) -> None:
     self.count = len(self.keyframes)
     
     this_track_data = []
@@ -1140,7 +1143,7 @@ class AnimationTrack:
     write_u16(data, offset+4, self.tangent_type.value)
 
 class AnimationKeyframe:
-  def __init__(self, time, value, tangent_in, tangent_out):
+  def __init__(self, time: int, value: int, tangent_in: int, tangent_out: int):
     self.time = time
     self.value = value
     self.tangent_in = tangent_in
@@ -1152,7 +1155,7 @@ class ColorAnimation:
   def __init__(self):
     pass
   
-  def read(self, data, offset, r_track_data, g_track_data, b_track_data, a_track_data):
+  def read(self, data, offset, r_track_data: List[int], g_track_data: List[int], b_track_data: List[int], a_track_data: List[int]):
     self.r = AnimationTrack()
     self.r.read(data, offset, r_track_data)
     offset += AnimationTrack.DATA_SIZE

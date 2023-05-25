@@ -133,15 +133,15 @@ def read_float(data, offset) -> float:
   return struct.unpack(">f", data.read(4))[0]
 
 
-def read_s8(data, offset):
+def read_s8(data, offset) -> int:
   data.seek(offset)
   return struct.unpack(">b", data.read(1))[0]
 
-def read_s16(data, offset):
+def read_s16(data, offset: int) -> int:
   data.seek(offset)
   return struct.unpack(">h", data.read(2))[0]
 
-def read_s32(data, offset):
+def read_s32(data, offset) -> int:
   data.seek(offset)
   return struct.unpack(">i", data.read(4))[0]
 

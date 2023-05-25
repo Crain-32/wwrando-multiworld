@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 import re
 from re import Match
@@ -5,6 +7,7 @@ from typing import TYPE_CHECKING
 
 from classes.gameitem import junk_item_ids
 from fs_helpers import *
+from wwlib.rarc import J3D_File
 
 if TYPE_CHECKING:
     from randomizer import Randomizer
@@ -90,6 +93,7 @@ def change_item(randomizer: 'Randomizer', path: AnyStr, item_id: int, world_id: 
     else:
         raise Exception("Invalid item path: " + path)
 
+
 def inject_world_id(randomizer: 'Randomizer', rel_path: AnyStr, offset_symbol: AnyStr, world_id: int = 0):
     path = os.path.join("files", rel_path)
     rel = randomizer.get_rel(path)
@@ -117,9 +121,9 @@ def change_chest_item(randomizer: 'Randomizer', arc_path: AnyStr, chest_index: i
     chest.save_changes()
 
 
-def change_event_item(randomizer: 'Randomizer', arc_path, event_index, actor_index, action_index, item_id: int,
-                      world_id: int = 0):
-    event_list = randomizer.get_arc(arc_path).get_file("event_list.dat")
+def change_event_item(randomizer: 'Randomizer', arc_path: AnyStr, event_index: int, actor_index: int, action_index: int,
+                      item_id: int, world_id: int = 0):
+    event_list: J3D_File = randomizer.get_arc(arc_path).get_file("event_list.dat")
     action = event_list.events[event_index].actors[actor_index].actions[action_index]
 
     if 0x6D <= item_id <= 0x72:  # Song
@@ -130,7 +134,8 @@ def change_event_item(randomizer: 'Randomizer', arc_path, event_index, actor_ind
         action.properties[0].value = [item_id]
 
 
-def change_scob_item(randomizer: 'Randomizer', arc_path, scob_index, layer, item_id: int, world_id: int = 0):
+def change_scob_item(randomizer: 'Randomizer', arc_path: AnyStr, scob_index: int, layer: int, item_id: int,
+                     world_id: int = 0):
     if arc_path.endswith("Stage.arc"):
         dzx = randomizer.get_arc(arc_path).get_file("stage.dzs")
     else:
@@ -138,13 +143,14 @@ def change_scob_item(randomizer: 'Randomizer', arc_path, scob_index, layer, item
     scob = dzx.entries_by_type_and_layer("SCOB", layer)[scob_index]
     if scob.actor_class_name in ["d_a_salvage", "d_a_tag_kb_item"]:
         scob.item_id = item_id
-        scob.world_id = 0x69
+        scob.world_id = world_id
         scob.save_changes()
     else:
         raise Exception("%s/SCOB%03X is an unknown type of SCOB" % (arc_path, scob_index))
 
 
-def change_actor_item(randomizer: 'Randomizer', arc_path, actor_index, layer, item_id: int, world_id: int = 0):
+def change_actor_item(randomizer: 'Randomizer', arc_path: AnyStr, actor_index: int, layer: int, item_id: int,
+                      world_id: int = 0):
     if arc_path.endswith("Stage.arc"):
         dzx = randomizer.get_arc(arc_path).get_file("stage.dzs")
     else:

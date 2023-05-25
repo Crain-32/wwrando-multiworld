@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import hashlib
 import itertools
 import os
@@ -70,7 +72,7 @@ class InvalidCleanISOError(Exception):
 
 class Randomizer:
   def __init__(self, seed, clean_iso_path, randomized_output_folder, options, permalink=None, cmd_line_args=OrderedDict()):
-    self.worlds = list()
+    self.worlds: List[World] = list()
     self.randomized_output_folder = randomized_output_folder
     self.options = options
     self.seed = seed
@@ -171,7 +173,7 @@ class Randomizer:
   
   def randomize(self):
     options_completed = 0
-    yield("Modifying game code...", options_completed)
+    yield "Modifying game code...", options_completed
     
     customizer.decide_on_link_model(self)
     
@@ -217,7 +219,7 @@ class Randomizer:
         tweaks.test_room(self)
     options_completed += 1
     
-    yield("Creating Worlds...", options_completed)
+    yield "Creating Worlds...", options_completed
     self.worlds = list()
     self.reset_rng()
     world_amount = int(self.options.get("world_count")) if self.options.get("multiplayer") == "Multiworld" else 1
@@ -253,19 +255,19 @@ class Randomizer:
     #   enemies.randomize_enemies(self)
     
     if self.options.get("randomize_enemy_palettes"):
-      yield("Randomizing enemy colors...", options_completed)
+      yield "Randomizing enemy colors...", options_completed
       self.reset_rng()
       palettes.randomize_enemy_palettes(self)
       options_completed += 10
     
-    yield("Randomizing items...\nThis may take some time", options_completed)
+    yield "Randomizing items...\nThis may take some time", options_completed
     if self.randomize_items:
       self.reset_rng()
       self.worlds = fill(self.worlds, self.rng)
     
     options_completed += 2
     
-    yield("Saving items...", options_completed)
+    yield "Saving items...", options_completed
     if self.randomize_items and not self.dry_run:
       items.write_changed_items(self, self.world_id if self.options.get("multiplayer") == "Multiworld" else 0)
       # tweaks.randomize_and_update_hints(self) # We'll implement Hints after we get this table.
@@ -274,7 +276,7 @@ class Randomizer:
       self.apply_necessary_post_randomization_tweaks(self.world_id if self.options.get("multiplayer") == "Multiplayer" else 0)
     options_completed += 7
     
-    yield("Saving randomized ISO...", options_completed)
+    yield "Saving randomized ISO...", options_completed
     if not self.dry_run:
       generator = self.save_randomized_iso()
       while True:
@@ -283,16 +285,16 @@ class Randomizer:
         if files_done == -1:
           break
         percentage_done = files_done/len(self.gcm.files_by_path)
-        yield("Saving randomized ISO...", options_completed+int(percentage_done*9))
+        yield "Saving randomized ISO...", options_completed + int(percentage_done * 9)
     options_completed += 9
-    yield("Writing logs...", options_completed)
+    yield "Writing logs...", options_completed
     
     if self.randomize_items:
       if not self.options.get("do_not_generate_spoiler_log"):
-        world_section: AnyStr = f"-W{self.world_id}" if self.options.get("multiplayer") == "Multiworld" else ""
+        world_section: AnyStr = f"-W{self.world_id + 1}" if self.options.get("multiplayer") == "Multiworld" else ""
         generate_spoiler_log(self.worlds, self.randomized_output_folder, f"{self.seed}{world_section}")
     
-    yield("Done", -1)
+    yield "Done", -1
   
   def apply_necessary_tweaks(self):
     patcher.apply_patch(self, "custom_data")
@@ -685,7 +687,7 @@ class Randomizer:
   def convert_string_to_integer_md5(self, string):
     return int(hashlib.md5(string.encode('utf-8')).hexdigest(), 16)
   
-  def get_new_rng(self):
+  def get_new_rng(self) -> Random:
     rng = Random()
     rng.seed(self.integer_seed)
     if self.options.get("do_not_generate_spoiler_log"):
@@ -827,7 +829,7 @@ class Randomizer:
       if len(specific_location_name) > max_location_name_length:
         max_location_name_length = len(specific_location_name)
     
-    return (zones, max_location_name_length)
+    return zones, max_location_name_length
   
   def write_non_spoiler_log(self):
     if self.no_logs:

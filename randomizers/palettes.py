@@ -1,42 +1,48 @@
 
 import os
+from typing import TYPE_CHECKING, List
 
 from wwlib import texture_utils
-from wwlib.j3d import BPRegister
+from wwlib.j3d import BPRegister, ColorAnimation
 
 from fs_helpers import *
+from wwlib.jpc import Particle
+from wwlib.rarc import J3D_File
+from wwlib.rel import REL
 
-def randomize_enemy_palettes(self):
-  for randomizable_file_group in self.palette_randomizable_files:
-    h_shift = self.rng.randint(20, 340)
-    v_shift = self.rng.randint(-40, 40)
+if TYPE_CHECKING:
+    from randomizer import Randomizer
+def randomize_enemy_palettes(randomizer: 'Randomizer'):
+  for randomizable_file_group in randomizer.palette_randomizable_files:
+    h_shift: int = randomizer.rng.randint(20, 340)
+    v_shift: int = randomizer.rng.randint(-40, 40)
     #print(h_shift, v_shift)
     
-    if self.dry_run:
+    if randomizer.dry_run:
       continue
     
     if randomizable_file_group["Name"] == "Darknut":
-      shift_hardcoded_darknut_colors(self, h_shift, v_shift)
+      shift_hardcoded_darknut_colors(randomizer, h_shift, v_shift)
     elif randomizable_file_group["Name"] == "Moblin":
-      shift_hardcoded_moblin_colors(self, h_shift, v_shift)
+      shift_hardcoded_moblin_colors(randomizer, h_shift, v_shift)
     elif randomizable_file_group["Name"] == "Stalfos":
-      shift_hardcoded_stalfos_colors(self, h_shift, v_shift)
+      shift_hardcoded_stalfos_colors(randomizer, h_shift, v_shift)
     elif randomizable_file_group["Name"] == "Rat":
-      shift_hardcoded_rat_colors(self, h_shift, v_shift)
+      shift_hardcoded_rat_colors(randomizer, h_shift, v_shift)
     elif randomizable_file_group["Name"] == "ChuChu":
-      shift_hardcoded_chuchu_colors(self, h_shift, v_shift)
+      shift_hardcoded_chuchu_colors(randomizer, h_shift, v_shift)
     elif randomizable_file_group["Name"] == "Puppet Ganon":
-      shift_hardcoded_puppet_ganon_colors(self, h_shift, v_shift)
+      shift_hardcoded_puppet_ganon_colors(randomizer, h_shift, v_shift)
     elif randomizable_file_group["Name"] == "Ganondorf":
-      shift_hardcoded_ganondorf_colors(self, h_shift, v_shift)
+      shift_hardcoded_ganondorf_colors(randomizer, h_shift, v_shift)
     
     if randomizable_file_group["Particle IDs"]:
       particle_ids = randomizable_file_group["Particle IDs"]
       for i in range(255):
         jpc_path = "files/res/Particle/Pscene%03d.jpc" % i
-        if jpc_path.lower() not in self.gcm.files_by_path_lowercase:
+        if jpc_path.lower() not in randomizer.gcm.files_by_path_lowercase:
           continue
-        jpc = self.get_jpc(jpc_path)
+        jpc = randomizer.get_jpc(jpc_path)
         
         particle_ids_for_enemy_in_jpc = [particle_id for particle_id in jpc.particles_by_id if particle_id in particle_ids]
         if not particle_ids_for_enemy_in_jpc:
@@ -44,12 +50,12 @@ def randomize_enemy_palettes(self):
         
         for particle_id in particle_ids_for_enemy_in_jpc:
           particle = jpc.particles_by_id[particle_id]
-          shift_all_colors_in_particle(self, particle, h_shift, v_shift)
+          shift_all_colors_in_particle(randomizer, particle, h_shift, v_shift)
     
     for rarc_data in randomizable_file_group["RARCs"]:
       rarc_name = rarc_data["Name"]
       #print(rarc_name)
-      rarc = self.get_arc("files/res/Object/%s.arc" % rarc_name)
+      rarc = randomizer.get_arc("files/res/Object/%s.arc" % rarc_name)
       
       for file_entry in rarc.file_entries:
         file_name = file_entry.name
@@ -63,26 +69,26 @@ def randomize_enemy_palettes(self):
         
         #print(file_name)
         
-        j3d_file = rarc.get_file(file_name)
+        j3d_file: J3D_File = rarc.get_file(file_name)
         
         if hasattr(j3d_file, "tex1"):
-          shift_all_colors_in_tex1(self, file_name, j3d_file, h_shift, v_shift)
+          shift_all_colors_in_tex1(randomizer, file_name, j3d_file, h_shift, v_shift)
         
         if file_name.endswith(".bti"):
-          shift_all_colors_in_bti(self, file_name, j3d_file, h_shift, v_shift)
+          shift_all_colors_in_bti(randomizer, file_name, j3d_file, h_shift, v_shift)
         
         if hasattr(j3d_file, "mat3"):
-          shift_all_colors_in_mat3(self, file_name, j3d_file, h_shift, v_shift)
+          shift_all_colors_in_mat3(randomizer, file_name, j3d_file, h_shift, v_shift)
         
         if hasattr(j3d_file, "mdl3"):
-          shift_all_colors_in_mdl3(self, file_name, j3d_file, h_shift, v_shift)
+          shift_all_colors_in_mdl3(randomizer, file_name, j3d_file, h_shift, v_shift)
         
         if hasattr(j3d_file, "trk1"):
-          shift_all_colors_in_trk1(self, file_name, j3d_file, h_shift, v_shift)
+          shift_all_colors_in_trk1(randomizer, file_name, j3d_file, h_shift, v_shift)
         
         j3d_file.save_changes()
 
-def shift_all_colors_in_tex1(self, file_name, j3d_file, h_shift, v_shift):
+def shift_all_colors_in_tex1(self, file_name, j3d_file: J3D_File, h_shift, v_shift):
   for texture_name in j3d_file.tex1.textures_by_name:
     if "toon" in texture_name:
       # Special texture related to lighting
@@ -116,7 +122,7 @@ def shift_all_colors_in_tex1(self, file_name, j3d_file, h_shift, v_shift):
     
     #first_texture.render().save("./wip/enemy recolors/%s/%s %d %d.png" % (file_name, texture_name, h_shift, v_shift))
 
-def shift_all_colors_in_bti(self, texture_name, texture, h_shift, v_shift):
+def shift_all_colors_in_bti(self, texture_name, texture: J3D_File, h_shift, v_shift):
   if texture.image_format in texture_utils.GREYSCALE_IMAGE_FORMATS:
     return
   
@@ -134,7 +140,7 @@ def shift_all_colors_in_bti(self, texture_name, texture, h_shift, v_shift):
     image = texture_utils.hsv_shift_image(image, h_shift, v_shift)
     texture.replace_image(image)
 
-def shift_all_colors_in_mat3(self, file_name, j3d_file, h_shift, v_shift):
+def shift_all_colors_in_mat3(self, file_name, j3d_file: J3D_File, h_shift, v_shift):
   for i, color in enumerate(j3d_file.mat3.reg_colors):
     r, g, b, a = color
     if r < 0 or g < 0 or b < 0:
@@ -148,7 +154,7 @@ def shift_all_colors_in_mat3(self, file_name, j3d_file, h_shift, v_shift):
     r, g, b = texture_utils.hsv_shift_color((r, g, b), h_shift, v_shift)
     j3d_file.mat3.konst_colors[i] = (r, g, b, a)
 
-def shift_all_colors_in_mdl3(self, file_name, j3d_file, h_shift, v_shift):
+def shift_all_colors_in_mdl3(self, file_name, j3d_file: J3D_File, h_shift, v_shift):
   for entry in j3d_file.mdl3.entries:
     tev_color_commands = [
       com for com in entry.bp_commands
@@ -191,8 +197,8 @@ def shift_all_colors_in_mdl3(self, file_name, j3d_file, h_shift, v_shift):
       hi_command.value |= ((b <<  0) & 0x0007FF)
       lo_command.value |= ((a << 12) & 0x7FF000)
 
-def shift_all_colors_in_trk1(self, file_name, j3d_file, h_shift, v_shift):
-  animations = []
+def shift_all_colors_in_trk1(randomizer: 'Randomizer', file_name, j3d_file: J3D_File, h_shift: int, v_shift: int):
+  animations: List[ColorAnimation] = []
   for mat_name, anims in j3d_file.trk1.mat_name_to_reg_anims.items():
     animations += anims
   for mat_name, anims in j3d_file.trk1.mat_name_to_konst_anims.items():
@@ -244,7 +250,7 @@ def shift_all_colors_in_trk1(self, file_name, j3d_file, h_shift, v_shift):
       if b_keyframe:
         b_keyframe.value = b
 
-def shift_all_colors_in_particle(self, particle, h_shift, v_shift):
+def shift_all_colors_in_particle(randomizer: 'Randomizer', particle: Particle, h_shift: int, v_shift: int):
   #print("%04X" % particle_id)
   #print(particle.tdb1.texture_filenames)
   
@@ -280,7 +286,7 @@ def shift_all_colors_in_particle(self, particle, h_shift, v_shift):
     r, g, b = texture_utils.hsv_shift_color((r, g, b), h_shift, v_shift)
     particle.ssp1.color_env = (r, g, b, a)
 
-def shift_hardcoded_color_in_rel(rel, offset, h_shift, v_shift):
+def shift_hardcoded_color_in_rel(rel: REL, offset: int, h_shift: int, v_shift: int):
   r = rel.read_data(read_u8, offset + 0)
   g = rel.read_data(read_u8, offset + 1)
   b = rel.read_data(read_u8, offset + 2)
@@ -289,7 +295,7 @@ def shift_hardcoded_color_in_rel(rel, offset, h_shift, v_shift):
   rel.write_data(write_u8, offset + 1, g)
   rel.write_data(write_u8, offset + 2, b)
 
-def shift_hardcoded_darknut_colors(self, h_shift, v_shift):
+def shift_hardcoded_darknut_colors(self, h_shift: int, v_shift: int):
   # Update the RGB values for Darknut armor destroyed particles.
   rel = self.get_rel("files/rels/d_a_tn.rel")
   offset = 0xE2AC
@@ -312,15 +318,15 @@ def shift_hardcoded_darknut_colors(self, h_shift, v_shift):
     assert data_len(palette_data) == 0x20
     rel.write_data(write_bytes, palette_offset, read_all_bytes(palette_data))
 
-def shift_hardcoded_moblin_colors(self, h_shift, v_shift):
+def shift_hardcoded_moblin_colors(randomizer: 'Randomizer', h_shift: int, v_shift: int):
   # Update the thread colors for the Moblin's spear
   for rel_name, offset in [("mo2", 0xD648), ("boko", 0x4488)]:
-    rel = self.get_rel("files/rels/d_a_%s.rel" % rel_name)
+    rel = randomizer.get_rel("files/rels/d_a_%s.rel" % rel_name)
     shift_hardcoded_color_in_rel(rel, offset, h_shift, v_shift)
 
-def shift_hardcoded_stalfos_colors(self, h_shift, v_shift):
+def shift_hardcoded_stalfos_colors(randomizer: 'Randomizer', h_shift: int, v_shift: int):
   # Stalfos hat thread
-  rel = self.get_rel("files/rels/d_a_st.rel")
+  rel = randomizer.get_rel("files/rels/d_a_st.rel")
   offset = 0x9F30
   shift_hardcoded_color_in_rel(rel, offset, h_shift, v_shift)
 
@@ -334,9 +340,9 @@ def shift_hardcoded_rat_colors(self, h_shift, v_shift):
   offset = 0x48C0
   shift_hardcoded_color_in_rel(rel, offset, h_shift, v_shift)
 
-def shift_hardcoded_chuchu_colors(self, h_shift, v_shift):
+def shift_hardcoded_chuchu_colors(randomizer: 'Randomizer', h_shift: int, v_shift: int):
   # ChuChu particles
-  rel = self.get_rel("files/rels/d_a_cc.rel")
+  rel = randomizer.get_rel("files/rels/d_a_cc.rel")
   offset = 0x7F88
   for i in range(5):
     shift_hardcoded_color_in_rel(rel, offset+i*4, h_shift, v_shift)
@@ -353,15 +359,15 @@ def shift_hardcoded_chuchu_colors(self, h_shift, v_shift):
   rel.write_data(write_float, 0x7EBC, g)
   rel.write_data(write_float, 0x7EC0, b)
 
-def shift_hardcoded_puppet_ganon_colors(self, h_shift, v_shift):
+def shift_hardcoded_puppet_ganon_colors(randomizer: 'Randomizer', h_shift: int, v_shift: int):
   # Puppet ganon's strings
-  rel = self.get_rel("files/rels/d_a_bgn.rel")
+  rel: REL = randomizer.get_rel("files/rels/d_a_bgn.rel")
   offset = 0xF0A8
   shift_hardcoded_color_in_rel(rel, offset, h_shift, v_shift)
   offset = 0xF0B0
   shift_hardcoded_color_in_rel(rel, offset, h_shift, v_shift)
   
-  rel = self.get_rel("files/rels/d_a_bgn3.rel")
+  rel = randomizer.get_rel("files/rels/d_a_bgn3.rel")
   r = rel.read_data(read_u8, 0x2CF)
   g = rel.read_data(read_u8, 0x2D7)
   b = rel.read_data(read_u8, 0x2DF)

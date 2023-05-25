@@ -3,11 +3,13 @@ import itertools
 import os
 
 from classes.gameitem import *
+from classes.location import Location
 from classes.world import World
 from logic.extras import item_id_dict, capital_case_with_space, chart_macro_to_island
 
+
 def generate_spoiler_log(worlds: list[World], output_folder, output_file_name):
-    with open(os.path.join(output_folder, ("WW" + output_file_name +"- Spoiler Log.txt")), 'w') as spoiler_log_file:
+    with open(os.path.join(output_folder, ("WW" + output_file_name + "- Spoiler Log.txt")), 'w') as spoiler_log_file:
         for world in worlds:
             spoiler_log_file.write(world.world_settings.spoiler_representation(world.world_id + 1))
             if world.world_settings.race_mode:
@@ -23,7 +25,7 @@ def generate_spoiler_log(worlds: list[World], output_folder, output_file_name):
         #         spoiler_log_file.write(location.spoiler_representation() + '\n')
         # spoiler_log_file.write("\n")
         spoiler_log_file.write("All Locations: \n")
-        required_items = list()
+        required_items: List[List[Location]] = list()
         for amount in range(len(worlds)):
             required_items.append(list())
         for world in worlds:
@@ -40,25 +42,29 @@ def generate_spoiler_log(worlds: list[World], output_folder, output_file_name):
         spoiler_log_file.write("\n")
         for world_id, required_items_in_world in enumerate(required_items):
             spoiler_log_file.write(f"World {world_id + 1} Potentially Major Items\n")
-            item_type_groups = itertools.groupby(
-                                sorted(
-                                    map(
-                                        (lambda g: g.set_item_type()),
-                                        required_items_in_world),
-                                    key=lambda i: i.current_item.item_type),
-                                lambda l: l.current_item.item_type)
+            item_type_groups: Dict[int, Location] = itertools.groupby(
+                sorted(
+                    map(
+                        (lambda g: g.set_item_type()),
+                        required_items_in_world),
+                    key=lambda i: i.current_item.item_type),
+                lambda l: l.current_item.item_type)
 
             for item_type, location_list in item_type_groups:
-                location_list = list(sorted(location_list, key=lambda loc:item_id_to_name_dict[loc.current_item.game_item_id]))
+                location_list: List[Location] = list(
+                    sorted(location_list, key=lambda loc: item_id_to_name_dict[loc.current_item.game_item_id]))
                 if len(location_list) == 0 or item_type == ITEM_IS_UNCATEGORIZED:
                     continue
                 spoiler_log_file.write(f"{item_type_to_name[item_type]}\n")
                 for location in location_list:
                     if item_type == ITEM_IS_TRIFORCE_CHART or item_type == ITEM_IS_TREASURE_CHART:
-                        chart_locations[location.current_item.world_id][location.current_item.game_item_id] = location.spoiler_short_hand_loc_rep()
+                        chart_locations[location.current_item.world_id][
+                            location.current_item.game_item_id] = location.spoiler_short_hand_loc_rep()
                     if "SunkenTreasure" in location.name:
-                        sunken_treasures[location.world_id][capital_case_with_space(location.name)] = location.spoiler_short_hand_item_rep()
-                    spoiler_log_file.write(f"{item_id_to_name_dict[location.current_item.game_item_id]}: {location.spoiler_short_hand_loc_rep()}\n")
+                        sunken_treasures[location.world_id][
+                            capital_case_with_space(location.name)] = location.spoiler_short_hand_item_rep()
+                    spoiler_log_file.write(
+                        f"{item_id_to_name_dict[location.current_item.game_item_id]}: {location.spoiler_short_hand_loc_rep()}\n")
                 spoiler_log_file.write("\n")
         spoiler_log_file.write("\n")
 
@@ -68,7 +74,7 @@ def generate_spoiler_log(worlds: list[World], output_folder, output_file_name):
                 if chart_island in sunken_treasures[world_id]:
                     chart_macro = world.macros[chart_macro_name]
                     spoiler_log_file.write(f"{chart_island}:\n")
-                    spoiler_log_file.write(f"\t{item_id_to_name_dict[chart_macro.expression.args[0]]} : {chart_locations[world_id][chart_macro.expression.args[0]]}\n")
+                    spoiler_log_file.write(
+                        f"\t{item_id_to_name_dict[chart_macro.expression.args[0]]} : {chart_locations[world_id][chart_macro.expression.args[0]]}\n")
                     spoiler_log_file.write(f"\tSunken Treasure: {sunken_treasures[world_id][chart_island]}\n")
             spoiler_log_file.write("\n")
-
