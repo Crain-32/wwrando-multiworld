@@ -2318,6 +2318,37 @@ def add_custom_actor_rels(randomizer: 'Randomizer'):
         section_index_of_actor_profile=2,
         offset_of_actor_profile=0,
     )
+    elf_path = os.path.join(ASM_PATH, "d_a_demo_item.plf")
+    rel_path = "files/rels/d_a_demo_item.rel"
+    randomizer.replace_rel
+
+
+def replace_rel_from_elf(randomizer: 'Randomizer', linked_elf_path, rel_path, actor_profile_name):
+    orig_rel = randomizer.get_rel(rel_path)
+    rel_id = orig_rel.id
+    main_symbols = randomizer.get_symbol_map("files/maps/framework.map")
+    new_rel, profile_section_index, profile_address = elf2rel.convert_elf_to_rel(linked_elf_path, rel_id, main_symbols,
+                                                                                 actor_profile_name)
+
+    randomizer.rels_by_path[rel_path] = new_rel
+
+    # If this REL is in RELS.arc, we also need to update the file entry to know that it's associated with a different REL now.
+    rel_name = os.path.basename(rel_path)
+    rels_arc = randomizer.get_arc("files/RELS.arc")
+    rel_file_entry = rels_arc.get_file_entry(rel_name)
+    if rel_file_entry:
+        rel_file_entry.data = new_rel.data
+
+    # We need to update the pointer to the REL's profile in the profile list.
+    profile_list = randomizer.get_rel("files/rels/f_pc_profile_lst.rel")
+    if rel_id not in profile_list.relocation_entries_for_module:
+        raise Exception("Tried to replace a REL that was not already in the profile list.")
+
+    profile_relocation = profile_list.relocation_entries_for_module[new_rel.id][0]
+    profile_relocation.section_num_to_relocate_against = profile_section_index
+    profile_relocation.symbol_address = profile_address
+
+    profile_list.save_changes(preserve_section_data_offsets=True)
 
 
 def fix_message_closing_sound_on_quest_status_screen(randomizer: 'Randomizer'):

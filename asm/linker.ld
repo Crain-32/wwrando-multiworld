@@ -67,6 +67,8 @@ Set__8dCcD_SphFRC11dCcD_SrcSph = 0x800abfc0;
 calc__14mDoExt_McaMorfFv = 0x800132e8;
 fopAcM_SearchByID__FUiPP10fopAc_ac_c = 0x800241c0;
 dComIfGp_setNextStage__FPCcsScScfUliSc = 0x800537c8;
+g_dComIfG_gameInfo = 0x803C4C08;
+
 subBgmStop__11JAIZelBasicFv = 0x802a4cdc;
 GetTgHitObj__12dCcD_GObjInfFv = 0x800aba48;
 fopScnM_ChangeReq__FP11scene_classssUs = 0x80029e6c;

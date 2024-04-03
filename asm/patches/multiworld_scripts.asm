@@ -2,9 +2,10 @@
 .org @NextFreeSpace
 
 ; Basically is a multiplayer struct we work with. Just in... Assembly...
-; byte worldId
-; byte itemId
-; byte stageId
+; u32 | u8 World Type (0: None, 1: Co-op, 2: Multiworld) | u8 Max Worlds (MW Only) | u8 World Id (MW Only) | u8 padding
+; u32 worldId
+; u32 itemId
+; u32 stageId
 ; bool eventHappenFlag
 ; pointer* pointerStorage
 
@@ -239,6 +240,8 @@ get_item_detour:
   mflr r6
   bl mark_story_event
 
+.org 0x80026A30 ; "fopAcm_createDemoItem"
+  rlwimi r4, r31, 16, 0, 15 ; r |= r31 << 0x10 & 0xFFFF0000
 
 .org 0x800C2E08
   bl get_item_detour
@@ -249,7 +252,10 @@ get_item_detour:
   nop
 .close
 
-
+.open "files/rels/d_a_obj_toripost.rel"; Post Box
+.org 0x500 ; cutPresentProc
+li r5, 0x6900
+.close
 
 .open "files/rels/d_a_tbox.rel" ; Treasure Chests
 .org 0x2764 ; In actionOpenWait__8daTbox_cFv
@@ -377,6 +383,6 @@ tablet_world_id:
   li r30, 0x69
   stw r30, 0x0 (r5)
   mr r30, r3
-  lis r3,-0x7FC4
+  lis r3, g_dComIfG_gameInfo@ha
   b 0x1B50
 .close

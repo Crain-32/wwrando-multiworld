@@ -20,3 +20,6 @@
 
 
 ; -5BF0 is 803FA110
+
+We can hijack `fopAcM_createItemForPresentDemo()`'s `argflag` in order to inject a world ID.
+That should be setting a value to a register currently being set to 0 in most of the DOLs.
