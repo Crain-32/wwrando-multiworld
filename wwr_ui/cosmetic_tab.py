@@ -724,6 +724,8 @@ class CosmeticTab(QWidget):
     # Grey out the custom voice disable option for models that don't have custom voice files.
     if custom_model_name == "Random" or custom_model_name == "Random (exclude Link)":
       self.ui.disable_custom_player_voice.setEnabled(True)
+    elif "Goose" in custom_model_name:
+      self.ui.disable_custom_player_voice.setEnabled(True)
     else:
       custom_model_path = os.path.join(CUSTOM_MODELS_PATH, custom_model_name)
       jaiinit_aaf_path = os.path.join(custom_model_path, "sound", "JaiInit.aaf")

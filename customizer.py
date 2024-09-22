@@ -293,21 +293,8 @@ def replace_link_model(self: WWRandomizer):
     always_arc.get_file_entry("shmref.bti").data = reflection_image_data
   
   if not self.options.disable_custom_player_voice:
-    # Replace voice sound effects.
-    jaiinit_aaf_path = os.path.join(custom_model_path, "sound/JaiInit.aaf")
-    voice_aw_path = os.path.join(custom_model_path, "sound/voice_0.aw")
-    ganont_aw_path = os.path.join(custom_model_path, "sound/GanonT_0.aw")
-    if os.path.isfile(jaiinit_aaf_path) and os.path.isfile(voice_aw_path):
-      with open(jaiinit_aaf_path, "rb") as f:
-        jaiinit_aaf_data = BytesIO(f.read())
-      self.replace_raw_file("files/Audiores/JaiInit.aaf", jaiinit_aaf_data)
-      with open(voice_aw_path, "rb") as f:
-        voice_aw_data = BytesIO(f.read())
-      self.replace_raw_file("files/Audiores/Banks/voice_0.aw", voice_aw_data)
-      if os.path.isfile(ganont_aw_path):
-        with open(ganont_aw_path, "rb") as f:
-          ganont_aw_data = BytesIO(f.read())
-        self.replace_raw_file("files/Audiores/Banks/GanonT_0.aw", ganont_aw_data)
+    from asm import patcher
+    patcher.apply_patch(self, "spawn_hotest")
 
 def revert_bck_files_in_arc_to_original(orig_arc, custom_arc):
   # Revert all BCK animations in a custom arc to the original ones.
