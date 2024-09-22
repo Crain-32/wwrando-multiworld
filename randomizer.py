@@ -393,6 +393,7 @@ class WWRandomizer:
     patcher.apply_patch(self, "make_game_nonlinear")
     patcher.apply_patch(self, "remove_cutscenes")
     patcher.apply_patch(self, "flexible_item_locations")
+    patcher.apply_patch(self, "spawn_hotest")
     patcher.apply_patch(self, "fix_vanilla_bugs")
     patcher.apply_patch(self, "misc_rando_features")
     tweaks.add_custom_actor_rels(self)
